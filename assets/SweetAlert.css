@@ -1,0 +1,46 @@
+.my-popup {
+  font-size: 17px;
+  border-radius: 14px !important;
+  padding: 1.3em 1.8em !important;
+  animation-duration: 0.5s !important; 
+}
+
+.btn-confirm {
+  background-color: #d33 !important;
+  color: white !important;
+  font-weight: bold;
+  border-radius: 5px !important;
+  padding: 8px 22px !important;
+  border: none !important;
+  transition: background-color 0.3s ease;
+}
+.btn-confirm:hover {
+  background-color: #a82828 !important;
+}
+
+.btn-cancel {
+  background-color: #4e555b !important;
+  color: white !important;
+  font-weight: bold;
+  border-radius: 5px !important;
+  padding: 8px 22px !important;
+  border: none !important;
+  transition: background-color 0.3s ease;
+}
+
+.btn-cancel:hover {
+  background-color: #4e555b !important;
+}
+
+.btn-ok {
+  background-color: #13131f !important;
+  color: white !important;
+  font-weight: bold;
+  border-radius: 5px !important;
+  padding: 8px 22px !important;
+  border: none !important;
+  transition: background-color 0.3s ease;
+}
+.btn-ok:hover {
+  background-color: #4e555b !important;
+}

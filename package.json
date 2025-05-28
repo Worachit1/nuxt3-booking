@@ -1,0 +1,31 @@
+{
+  "name": "nuxt-app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": {
+    "@fortawesome/fontawesome-free": "^6.7.2",
+    "@fullcalendar/core": "^6.1.17",
+    "@fullcalendar/daygrid": "^6.1.17",
+    "@fullcalendar/interaction": "^6.1.17",
+    "@fullcalendar/vue3": "^6.1.17",
+    "@pinia/nuxt": "^0.11.0",
+    "axios": "^1.8.4",
+    "cropperjs": "^1.5.13",
+    "dayjs": "^1.11.13",
+    "element-plus": "^2.9.11",
+    "nuxt": "^3.16.2",
+    "pinia": "^3.0.2",
+    "pinia-plugin-persistedstate": "^4.2.0",
+    "vue": "^3.5.13",
+    "vue-cropperjs": "^5.0.0",
+    "vue-router": "^4.5.0",
+    "vue-sweetalert2": "^5.0.11"
+  }
+}

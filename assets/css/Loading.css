@@ -1,0 +1,44 @@
+/* ชั้นครอบทั้งหมด ให้อยู่กลางหน้าจอแบบแน่นอน */
+.loader-overlay {
+  position: fixed; /* อยู่บนสุดของทุกอย่าง */
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(4, 4, 4, 0.5); 
+  z-index: 9999;
+}
+
+/* HTML: <div class="loader"></div> */
+.loader {
+  width: 80px;
+  aspect-ratio: 1;
+  display: grid;
+  border: 8px solid #0000;
+  border-radius: 50%;
+  border-color: #575a8a #0000;
+  animation: l16 1s infinite linear;
+}
+.loader::before,
+.loader::after {    
+  content: "";
+  grid-area: 1/1;
+  margin: 2px;
+  border: inherit;
+  border-radius: 50%;
+}
+.loader::before {
+  border-color: #3929c6 #0000;
+  animation: inherit; 
+  animation-duration: .5s;
+  animation-direction: reverse;
+}
+.loader::after {
+  margin: 8px;
+}
+@keyframes l16 { 
+  100%{transform: rotate(1turn)}
+}

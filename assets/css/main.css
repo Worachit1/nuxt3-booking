@@ -1,0 +1,62 @@
+/* assets/css/main.css */
+
+/* โหลดฟอนต์ */
+@font-face {
+    font-family: 'Kanit';
+    src: url('@/assets/css/Kanit/Kanit-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+  }
+  
+  /* ใช้ฟอนต์ */
+  body {
+    font-family: 'Kanit';
+    margin:0;
+    padding:20px;
+    background-color: whitesmoke;
+    height: 100%;
+  }
+
+  input[type="text"] {
+    font-family: 'Kanit';
+  }
+
+  button {
+    font-family: 'Kanit';
+    font-weight: bold;
+  }
+
+  input,
+  select,
+  textarea {
+    font-family: 'Kanit';
+  }
+  date-input {
+    font-family: 'Kanit';
+  }
+  search-button {
+    font-family: 'Kanit';
+  }
+
+  /* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
