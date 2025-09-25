@@ -2,7 +2,6 @@
 import { ref, onMounted } from "vue";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
-
 import LoadingPage from "@/components/Loading.vue";
 import { useBuildingStore } from "@/store/buildingStore";
 
@@ -10,21 +9,21 @@ definePageMeta({
   middleware: ["load-user"],
 });
 
-// Store
 const buildingStore = useBuildingStore();
 const { isLoading } = storeToRefs(buildingStore);
 
-// Local state for editing, modal and new building name
 const editableBuildings = ref([]);
 const showModal = ref(false);
 const newBuildingName = ref("");
+const newBuildingImage = ref(null);
+const imageFiles = ref({}); // เก็บไฟล์แต่ละแถว
 
-// โหลดข้อมูลอาคารมาแปลงใส่ editableBuildings เพื่อให้แก้ไขชื่อได้
 const loadBuildings = async () => {
   await buildingStore.fetchBuildings();
   editableBuildings.value = buildingStore.buildings.map((b) => ({
     ...b,
     isEditing: false,
+    image_url: b.image_url || "",
   }));
 };
 
@@ -36,9 +35,15 @@ const createBuilding = async () => {
     Swal.fire("แจ้งเตือน", "กรุณากรอกชื่ออาคาร", "warning");
     return;
   }
+  const formData = new FormData();
+  formData.append("name", name);
+  if (newBuildingImage.value) {
+    formData.append("image", newBuildingImage.value);
+  }
   buildingStore.isLoading = true;
-  await buildingStore.addBuilding({ name });
+  await buildingStore.addBuilding(formData);
   newBuildingName.value = "";
+  newBuildingImage.value = null;
   Swal.fire({
     title: "เพิ่มอาคารใหม่เรียบร้อย",
     icon: "success",
@@ -57,17 +62,40 @@ const startEdit = (index) => {
   editableBuildings.value[index].isEditing = true;
 };
 
+const onImageChange = (e, index) => {
+  const file = e.target.files[0];
+  if (file) {
+    imageFiles.value[index] = file;
+    // แสดง preview ทันที
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      editableBuildings.value[index].image_url = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+};
+
+const onNewImageChange = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    newBuildingImage.value = file;
+  }
+};
+
 const saveEdit = async (id, index) => {
-  const updated = { name: editableBuildings.value[index].name };
+  const formData = new FormData();
+  formData.append("name", editableBuildings.value[index].name);
+  if (imageFiles.value[index]) {
+    formData.append("image", imageFiles.value[index]);
+  }
   buildingStore.isLoading = true;
-  await buildingStore.updateBuilding(id, updated);
+  await buildingStore.updateBuilding(id, formData);
   editableBuildings.value[index].isEditing = false;
   await loadBuildings();
   buildingStore.isLoading = false;
 };
 
 const deleteBuilding = async (building) => {
-  // เช็คจาก rooms_name ใน building
   if (Array.isArray(building.rooms_name) && building.rooms_name.length > 0) {
     Swal.fire({
       title: "ไม่สามารถลบได้",
@@ -114,11 +142,12 @@ const deleteBuilding = async (building) => {
 const closeModals = () => {
   showModal.value = false;
   newBuildingName.value = "";
+  newBuildingImage.value = null;
 };
 </script>
 
 <template>
-  <teleport to="body"> 
+  <teleport to="body">
     <LoadingPage v-if="isLoading" />
   </teleport>
   <div v-if="buildingStore.isLoading" class="loading-overlay">
@@ -136,12 +165,30 @@ const closeModals = () => {
       <table class="building-table">
         <thead>
           <tr>
+            <th>รูปภาพ</th>
             <th>ชื่ออาคาร</th>
             <th>การดำเนินการ</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="(b, index) in editableBuildings" :key="b.id">
+            <td>
+              <img
+                v-if="b.image_url"
+                :src="b.image_url"
+                alt="รูปอาคาร"
+                style="width:100px; height:70px; object-fit:cover; border-radius:8px;"
+              />
+              <span v-else style="color:#aaa;">ไม่มีรูป</span>
+              <div v-if="b.isEditing" style="margin-top:8px;">
+                <input
+                  type="file"
+                  accept="image/*"
+                  @change="onImageChange($event, index)"
+                  style="width:100%; font-size:13px;"
+                />
+              </div>
+            </td>
             <td>
               <input type="text" v-model="b.name" :disabled="!b.isEditing" />
             </td>
@@ -157,7 +204,6 @@ const closeModals = () => {
                 <button class="confirm" v-else @click="saveEdit(b.id, index)">
                   <i class="fa-solid fa-check"></i> บันทึก
                 </button>
-
                 <button @click="deleteBuilding(b)" class="delete">
                   <i class="fa-solid fa-trash-can"></i> ลบ
                 </button>
@@ -182,6 +228,12 @@ const closeModals = () => {
             v-model="newBuildingName"
             type="text"
             placeholder="ชื่ออาคาร"
+          />
+          <input
+            type="file"
+            accept="image/*"
+            @change="onNewImageChange"
+            style="margin-bottom: 12px;"
           />
           <div class="modal-actions">
             <button @click="createBuilding" class="modal-confirm">
