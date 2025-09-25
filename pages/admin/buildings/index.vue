@@ -4,10 +4,7 @@ import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 
 import LoadingPage from "@/components/Loading.vue";
-
-
 import { useBuildingStore } from "@/store/buildingStore";
-import { useBuilding_RoomStore } from "~/store/building_roomStore";
 
 definePageMeta({
   middleware: ["load-user"],
@@ -16,7 +13,6 @@ definePageMeta({
 // Store
 const buildingStore = useBuildingStore();
 const { isLoading } = storeToRefs(buildingStore);
-const buildingRoomStore = useBuilding_RoomStore();
 
 // Local state for editing, modal and new building name
 const editableBuildings = ref([]);
@@ -71,11 +67,8 @@ const saveEdit = async (id, index) => {
 };
 
 const deleteBuilding = async (building) => {
-  await buildingRoomStore.fetchBuilding_Rooms();
-  const buildingRooms = buildingRoomStore.building_rooms.filter(
-    (br) => br.building_id === building.id
-  );
-  if (buildingRooms.length > 0) {
+  // เช็คจาก rooms_name ใน building
+  if (Array.isArray(building.rooms_name) && building.rooms_name.length > 0) {
     Swal.fire({
       title: "ไม่สามารถลบได้",
       text: "เนื่องจากมีห้องอยู่ในอาคารนี้ กรุณาลบห้องก่อน",
@@ -115,8 +108,7 @@ const deleteBuilding = async (building) => {
       confirmButton: "btn-ok",
     },
   });
-return;
-
+  return;
 };
 
 const closeModals = () => {

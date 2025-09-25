@@ -1,9 +1,9 @@
 <script setup>
-import { onMounted, computed } from "vue";
+import { onMounted, computed, ref, reactive } from "vue";
 import { useUserStore } from "@/store/userStore";
 import { useRouter, useRoute } from "vue-router";
-
 import LoadingPage from "~/components/Loading.vue";
+import Swal from "sweetalert2";
 
 const route = useRoute();
 const router = useRouter();
@@ -14,12 +14,61 @@ const { isLoading } = storeToRefs(userStore);
 
 const user = computed(() => userStore.currentUser || null);
 
+const isEditing = ref(false);
+const editUser = reactive({
+  first_name: "",
+  last_name: "",
+  phone: "",
+  image_url: "",
+  password: "",
+  position_name: "",
+  imageFile: null,
+});
+const previewImage = ref("");
+
 const handleImageError = (e) => {
   e.target.src = "/images/default-profile.jpg";
 };
 
 const handleBackButton = () => {
   router.push("/");
+};
+
+const startEdit = () => {
+  isEditing.value = true;
+  editUser.first_name = user.value.first_name;
+  editUser.last_name = user.value.last_name;
+  editUser.phone = user.value.phone;
+  editUser.position_name = user.value.position_name;
+  editUser.password = ""; // ไม่เปลี่ยนรหัสผ่าน
+  editUser.image_url = user.value.image_url;
+  previewImage.value = user.value.image_url;
+};
+
+const cancelEdit = () => {
+  isEditing.value = false;
+  previewImage.value = "";
+};
+
+const onImageChange = (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    editUser.imageFile = file;
+    previewImage.value = URL.createObjectURL(file);
+    editUser.image_url = file;
+  }
+};
+
+const saveEdit = async () => {
+  try {
+    await userStore.updateUser(user.value.id, editUser);
+    await userStore.getUserById(user.value.id);
+    Swal.fire("สำเร็จ", "บันทึกข้อมูลเรียบร้อย", "success");
+    isEditing.value = false;
+    previewImage.value = "";
+  } catch (e) {
+    Swal.fire("ผิดพลาด", "ไม่สามารถบันทึกข้อมูลได้", "error");
+  }
 };
 
 onMounted(async () => {
@@ -41,7 +90,7 @@ onMounted(async () => {
     <!-- กล่องซ้าย -->
     <div class="profile-left">
       <img
-        :src="user.image_url || '/images/default-profile.jpg'"
+        :src="previewImage || user.image_url || '/images/default-profile.jpg'"
         alt="Profile"
         class="profile-img"
         @error="handleImageError"
@@ -49,7 +98,12 @@ onMounted(async () => {
       <p class="profile-name">{{ user.first_name }} {{ user.last_name }}</p>
       <p>อีเมล : {{ user.email }}</p>
       <p>ตำแหน่งงาน : {{ user.position_name || "—" }}</p>
-      <!-- <button class="edit-btn">✏️ แก้ไขรูป</button> -->
+      <button v-if="!isEditing" class="edit-btn" @click="startEdit">
+        <i class="fa-solid fa-pen-to-square"></i> แก้ไขข้อมูล
+      </button>
+      <div v-if="isEditing" style="margin-top: 10px">
+        <input type="file" @change="onImageChange" accept="image/*" />
+      </div>
     </div>
 
     <!-- กล่องขวา -->
@@ -59,21 +113,25 @@ onMounted(async () => {
         <div>
           <label>ชื่อ</label>
           <input
-            disabled
             class="input-box"
             type="text"
             placeholder="กรอกชื่อ"
-            :value="user.first_name"
+            :value="isEditing ? editUser.first_name : user.first_name"
+            :readonly="!isEditing"
+            @input="(e) => (editUser.first_name = e.target.value)"
+            :style="!isEditing ? 'background:#f3f3f3;cursor:not-allowed;' : ''"
           />
         </div>
         <div>
           <label>นามสกุล</label>
           <input
-            disabled
             class="input-box"
             type="text"
             placeholder="กรอกนามสกุล"
-            :value="user.last_name"
+            :value="isEditing ? editUser.last_name : user.last_name"
+            :readonly="!isEditing"
+            @input="(e) => (editUser.last_name = e.target.value)"
+            :style="!isEditing ? 'background:#f3f3f3;cursor:not-allowed;' : ''"
           />
         </div>
       </div>
@@ -81,18 +139,25 @@ onMounted(async () => {
         <div>
           <label>เบอร์โทรศัพท์</label>
           <input
-            disabled
             class="input-box"
             type="text"
             placeholder="กรอกเบอร์โทรศัพท์"
-            :value="user.phone || '—'"
+            :value="isEditing ? editUser.phone : user.phone"
+            :readonly="!isEditing"
+            @input="(e) => (editUser.phone = e.target.value)"
+            :style="!isEditing ? 'background:#f3f3f3;cursor:not-allowed;' : ''"
           />
         </div>
       </div>
 
       <div class="button-row">
-        <!-- <button class="btn-black">บันทึกข้อมูล</button> -->
-        <button @click="handleBackButton" class="btn-orange">กลับ</button>
+        <button v-if="isEditing" class="btn-black" @click="saveEdit">
+          บันทึกข้อมูล
+        </button>
+        <button v-if="isEditing" class="btn-back" @click="cancelEdit">
+          ยกเลิก
+        </button>
+        <button v-else @click="handleBackButton" class="btn-back"><i class="fa-solid fa-arrow-left"></i> กลับ</button>
       </div>
     </div>
   </div>
@@ -134,12 +199,50 @@ onMounted(async () => {
 
 .edit-btn {
   margin-top: 10px;
-  background-color: #00aaff;
-  color: white;
+  background-color: #2196f3;
+  color: #fff;
   border: none;
-  padding: 6px 12px;
+  padding: 8px 20px;
   border-radius: 8px;
   cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: background 0.2s;
+}
+.edit-btn:hover {
+  background-color: #1769aa;
+}
+
+.btn-black {
+  background-color: #222f3e;
+  color: #fff;
+  border: none;
+  padding: 10px 28px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  transition: background 0.2s;
+}
+.btn-black:hover {
+  background-color: #3a3a4a;
+}
+
+.btn-back {
+  background-color: #f44336;
+  color: #fff;
+  border: none;
+  padding: 10px 28px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  margin-right: 0;
+  margin-top: 0;
+  transition: background 0.2s;
+}
+.btn-back:hover {
+  background-color: #c62828;
 }
 
 .profile-right {
@@ -180,32 +283,5 @@ h2 {
   justify-content: flex-end;
   gap: 15px;
   margin-top: 30px;
-}
-
-.btn-black {
-  background-color: black;
-  color: white;
-  border: none;
-  padding: 10px 24px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-.btn-orange {
-  background-color: #13131f;
-  color: white;
-  border: none;
-  padding: 10px 24px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: bold;
-  margin-right: 20px;
-  margin-top: 50px;
-}
-
-.btn-orange:hover {
-  background-color: #4a4a4a;
-  transition: background-color 0.3s ease;
 }
 </style>

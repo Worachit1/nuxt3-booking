@@ -14,9 +14,11 @@
     "@fullcalendar/core": "^6.1.17",
     "@fullcalendar/daygrid": "^6.1.17",
     "@fullcalendar/interaction": "^6.1.17",
+    "@fullcalendar/timegrid": "^6.1.18",
     "@fullcalendar/vue3": "^6.1.17",
     "@pinia/nuxt": "^0.11.0",
     "axios": "^1.8.4",
+    "chart.js": "^4.5.0",
     "cropperjs": "^1.5.13",
     "dayjs": "^1.11.13",
     "element-plus": "^2.9.11",
@@ -24,8 +26,12 @@
     "pinia": "^3.0.2",
     "pinia-plugin-persistedstate": "^4.2.0",
     "vue": "^3.5.13",
+    "vue-chartjs": "^5.3.2",
     "vue-cropperjs": "^5.0.0",
     "vue-router": "^4.5.0",
     "vue-sweetalert2": "^5.0.11"
+  },
+  "devDependencies": {
+    "sass-embedded": "^1.89.2"
   }
 }

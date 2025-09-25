@@ -6,6 +6,8 @@ import { useUserStore } from "@/store/userStore";
 import { ref, onMounted, computed } from "vue";
 import dayjs from "dayjs";
 import "dayjs/locale/th";
+import Swal from "sweetalert2";
+import "sweetalert2/dist/sweetalert2.min.css";
 
 definePageMeta({
   middleware: ["load-user"],
@@ -31,7 +33,7 @@ const isLoadingPage = computed(() => userLoading.value || bookingLoading.value);
 const statusMap = {
   Pending: "กำลังรอ...",
   Approved: "ได้รับอนุมัติการจองแล้ว",
-  Canceled: "ถูกปฏิเสธการจอง",
+  Canceled: "ปฏิเสธการจอง",
   Finished: "การจองสิ้นสุดแล้ว",
 };
 
@@ -71,6 +73,27 @@ const statusClass = (status) => {
 
 const openModal = (booking) => {
   console.log("เปิด modal ของ booking:", booking);
+};
+
+const cancelBooking = async (booking) => {
+  const result = await Swal.fire({
+    title: "ยืนยันการยกเลิกการจอง?",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "ใช่, ยกเลิก",
+    cancelButtonText: "ไม่",
+  });
+  if (!result.isConfirmed) return;
+
+  await bookingStore.updateStatusBooking(booking.id, {
+    status: "Canceled",
+    approved_by: "ผู้ใช้ยกเลิกการจอง", // <<--- ตรงนี้
+  });
+  await bookingStore.getBookingByuserId(userId);
+  Swal.fire("ยกเลิกสำเร็จ", "สถานะการจองถูกเปลี่ยนเป็น 'Canceled'", "success")
+  .then(() => {
+    window.location.reload();
+  });
 };
 
 // Pagination
@@ -158,6 +181,7 @@ const gotoPage = (page) => {
               <th>เวลาเริ่ม</th>
               <th>เวลาสิ้นสุด</th>
               <th>สถานะ</th>
+              <th>การดำเนินการ</th>
             </tr>
           </thead>
           <tbody>
@@ -175,51 +199,59 @@ const gotoPage = (page) => {
                   {{ statusMap[booking.status] }}
                 </button>
               </td>
+              <td> <button
+                v-if="booking.status === 'Pending'"
+                class="btn-cancelbooking"
+                @click="cancelBooking(booking)"
+              >
+                ยกเลิกการจอง
+              </button>
+            </td>
+             
             </tr>
           </tbody>
         </table>
 
         <!-- pagination control -->
-         <div class="pagination-bar">
+        <div class="pagination-bar">
           <div class="pagination">
-          <button
-            :disabled="currentPage === 1"
-            @click="gotoPage(currentPage - 1)"
-          >
-            ก่อนหน้า
-          </button>
+            <button
+              :disabled="currentPage === 1"
+              @click="gotoPage(currentPage - 1)"
+            >
+              ก่อนหน้า
+            </button>
 
-          <button
-            v-for="page in paginationRange"
-            :key="page + '-btn'"
-            :class="{ active: page === currentPage }"
-            @click="gotoPage(page)"
-            :disabled="page === '...'"
-          >
-            {{ page }}
-          </button>
+            <button
+              v-for="page in paginationRange"
+              :key="page + '-btn'"
+              :class="{ active: page === currentPage }"
+              @click="gotoPage(page)"
+              :disabled="page === '...'"
+            >
+              {{ page }}
+            </button>
 
-          <button
-            :disabled="currentPage === totalPages"
-            @click="gotoPage(currentPage + 1)"
-          >
-            ถัดไป
-          </button>
+            <button
+              :disabled="currentPage === totalPages"
+              @click="gotoPage(currentPage + 1)"
+            >
+              ถัดไป
+            </button>
 
-          <div class="page-jump">
-            <label>ไปหน้า:</label>
-            <input
-              type="number"
-              min="1"
-              :max="totalPages"
-              v-model.number="jumpToPage"
-              @keyup.enter="gotoPage(jumpToPage)"
-              :disabled="totalPages === 0"
-            />
+            <div class="page-jump">
+              <label>ไปหน้า:</label>
+              <input
+                type="number"
+                min="1"
+                :max="totalPages"
+                v-model.number="jumpToPage"
+                @keyup.enter="gotoPage(jumpToPage)"
+                :disabled="totalPages === 0"
+              />
+            </div>
           </div>
         </div>
-      </div>
-        
       </div>
 
       <div v-else class="no-data">ไม่มีรายการจองในขณะนี้</div>
@@ -229,14 +261,14 @@ const gotoPage = (page) => {
 
 <style scoped>
 .page-wrapper {
-  min-height: 110vh;          
+  min-height: 110vh;
   display: flex;
-  flex-direction: column;     
+  flex-direction: column;
 }
 
 .container {
   flex-grow: 1;
-  margin: 10px ;              
+  margin: 10px;
 }
 
 .mb-2 {
@@ -338,11 +370,12 @@ button {
   border-radius: 5px;
   font-size: 14px;
   color: rgb(255, 239, 239);
-  cursor: pointer;
 }
+
 .btn-pending {
   background-color: #f9c749;
 }
+
 .btn-pending:hover {
   background-color: #d8ba6f;
   transition: background-color 0.3s ease;
@@ -351,6 +384,7 @@ button {
 .btn-approved {
   background-color: #73ea8d;
 }
+
 .btn-approved:hover {
   background-color: #5bcf6b;
   transition: background-color 0.3s ease;
@@ -359,6 +393,7 @@ button {
 .btn-cancel {
   background-color: #f06666;
 }
+
 .btn-cancel:hover {
   background-color: #d9534f;
   transition: background-color 0.3s ease;
@@ -367,13 +402,23 @@ button {
 .btn-finished {
   background-color: #6c757d;
 }
+
 .btn-finished:hover {
   background-color: #5a6268;
   transition: background-color 0.3s ease;
 }
 
+.btn-cancelbooking {
+  background-color: #ef2727;
+  cursor: pointer;
+}
+.btn-cancelbooking:hover {
+  background-color: #d9534f;
+  transition: background-color 0.3s ease;
+}
+
 .booking-table-wrapper {
-  min-height: 400px; /* ✅ ปรับความสูงขั้นต่ำตามต้องการ */
+  min-height: 400px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -393,9 +438,11 @@ button {
 /* Pagination footer */
 .pagination {
   display: flex;
-  justify-content: center; /* ทำให้ปุ่มเรียงตรงกลาง */
+  justify-content: center;
+  /* ทำให้ปุ่มเรียงตรงกลาง */
   align-items: center;
-  flex-wrap: wrap; /* เผื่อปุ่มเยอะจะได้ไม่ล้น */
+  flex-wrap: wrap;
+  /* เผื่อปุ่มเยอะจะได้ไม่ล้น */
   gap: 5px;
   padding: 10px 0;
   background-color: white;
@@ -430,6 +477,7 @@ button {
   font-weight: bold;
   border: 1px solid #ccc;
 }
+
 .pagination-bar {
   position: fixed;
   bottom: 0;
@@ -439,4 +487,3 @@ button {
   z-index: 50;
 }
 </style>
-

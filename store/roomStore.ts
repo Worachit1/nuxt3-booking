@@ -33,6 +33,28 @@ export const useRoomStore = defineStore("room", {
         this.isLoading = false;
       }
     },
+    async fetchAllRooms(page = 1, size = 1000) {
+      this.isLoading = true;
+      try {
+        const response = await axios.get(
+          `${config.public.apiBase}/api/v1/rooms/list`,
+          { params: { page, size } }
+        );
+        if (response.status === 200) {
+          this.rooms = response.data.data || [];
+          // แก้ตรงนี้ให้แน่ใจว่า total ได้ค่าจาก backend
+          this.total = response.data.pagination?.total || 0;
+        } else {
+          this.rooms = [];
+          this.total = 0;
+        }
+      } catch (error) {
+        this.rooms = [];
+        this.total = 0;
+      } finally {
+        this.isLoading = false;
+      }
+    },
     async getById(room_id: string) {
       this.isLoading = true;
       try {

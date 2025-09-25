@@ -91,36 +91,49 @@ export const useUserStore = defineStore("user", {
         },
 
         async updateUser(user_id: string, updatedUser: any) {
-            this.isLoading = true;
-            const config = useRuntimeConfig();
-            const token = localStorage.getItem("token") || null;
-            const formData = new FormData();
-            formData.append("first_name", updatedUser.first_name);
-            formData.append("last_name", updatedUser.last_name);
-            formData.append("password", updatedUser.password);
-            formData.append("phone", updatedUser.phone);
-            formData.append("position_name", updatedUser.position_name);
-            formData.append("image_url", updatedUser.image_url);
+    this.isLoading = true;
+    const config = useRuntimeConfig();
+    const token = localStorage.getItem("token") || null;
+    const formData = new FormData();
+    formData.append("first_name", updatedUser.first_name || "");
+    formData.append("last_name", updatedUser.last_name || "");
+    formData.append("phone", updatedUser.phone || "");
 
-            try {
-                const response = await axios.put(`${config.public.apiBase}/api/v1/users/${user_id}`, formData, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "multipart/form-data",
-                    },
-                });
-                if (response.status === 200) {
-                    // console.log("User updated successfully:", response.data.data);
-                    return response.data;
-                } else {
-                    console.error("Error updating user:", response.statusText);
-                }
-            } catch (error) {
-                console.error("Error updating user:", error);
-            }finally {
-                this.isLoading = false;
+    // ตรวจสอบว่าเป็นไฟล์หรือเป็น URL
+    if (updatedUser.image_url instanceof File) {
+        formData.append("image_url", updatedUser.image_url);
+    } else if (typeof updatedUser.image_url === "string" && updatedUser.image_url) {
+        formData.append("image_url", updatedUser.image_url);
+    }
+
+    try {
+        const response = await axios.patch(
+            `${config.public.apiBase}/api/v1/users/${user_id}`,
+            formData,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "multipart/form-data",
+                },
             }
-        },
+        );
+        if (response.status === 200) {
+            return response.data;
+        } else {
+            console.error("Error updating user:", response.statusText);
+        }
+    } catch (error) {
+        // แสดง error message จาก backend
+        if (typeof error === "object" && error !== null && "response" in error) {
+            // @ts-expect-error: error is assumed to have response property
+            console.error("Error updating user:", error.response.data);
+        } else {
+            console.error("Error updating user:", error);
+        }
+    } finally {
+        this.isLoading = false;
+    }
+},
         async deleteUser(user_id: string) {
             this.isLoading = true;
             const config = useRuntimeConfig();

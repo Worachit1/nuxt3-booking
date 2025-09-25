@@ -98,7 +98,7 @@ const handleConfirm = async () => {
   if (startTime < now) {
     await Swal.fire({
       icon: "warning",
-      title: "❗ ไม่สามารถจองในอดีตได้",
+      title: "❗ ไม่สามารถจองเวลาในอดีตได้",
       text: "กรุณาเลือกวันและเวลาใหม่",
       confirmButtonText: "ตกลง",
       customClass: {
@@ -110,7 +110,7 @@ const handleConfirm = async () => {
   }
 
   // ตรวจสอบเวลาทับซ้อนกับการจองที่มีสถานะเป็น "Approved"
-  await bookingStore.fetchBookings(); // ดึงข้อมูลการจองทั้งหมด
+  await bookingStore.fetchAllBookings(); // ดึงข้อมูลการจองทั้งหมด
   const isOverlapping = bookingStore.bookings.some((booking) => {
     if (
       booking.status === "Approved" ||

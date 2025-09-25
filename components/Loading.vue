@@ -4,7 +4,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 // ไม่มีสคริปต์จำเป็น
 </script>
 

@@ -106,8 +106,8 @@ const handleCreate = async () => {
       },
     });
 
-    // window.location.href = "/admin/rooms";
-    router.push("/admin/rooms");
+    window.location.href = "/admin/rooms";
+    // router.push("/admin/rooms");
   } else {
     await Swal.fire({
       icon: "error",

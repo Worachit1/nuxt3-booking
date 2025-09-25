@@ -229,7 +229,7 @@ const openModal = (booking) => {
                 <th>เวลาเริ่มจอง</th>
                 <th>เวลาสิ้นสุดจอง</th>
                 <th>สถานะ</th>
-                <th>อนุมัติการจองโดย</th>
+                <th>ผู้ที่จัดการ</th>
               </tr>
             </thead>
             <tbody>

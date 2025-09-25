@@ -1,164 +1,208 @@
+
 <script setup>
-import { useRoute } from "vue-router";
-import LoadingPage from "@/components/Loading.vue";
-import { useRoomStore } from "@/store/roomStore";
-import { useBuilding_RoomStore } from "@/store/building_roomStore";
+import { useRoute, useRouter } from "vue-router";
 import { ref, onMounted } from "vue";
+import LoadingPage from "~/components/Loading.vue";
+import { useRoomStore } from "@/store/roomStore";
 
 definePageMeta({
-  middleware: ["load-user"],
+  middleware: ["load-user"]
 });
 
 const route = useRoute();
+const router = useRouter();
 const roomId = route.params.id;
 const roomStore = useRoomStore();
-const buildingRoomStore = useBuilding_RoomStore();
-const buildingRoom = ref(null);
-const room = ref(null);
+const { isLoading } = storeToRefs(roomStore);
 
-const { isLoading } = storeToRefs(roomStore, buildingRoomStore);
-
+const room = ref({});
 onMounted(async () => {
   try {
-    // ดึงข้อมูลห้อง
-    room.value = await roomStore.getById(roomId);
-    // ดึงข้อมูล building+room
-    buildingRoom.value = await buildingRoomStore.getByRoomId(roomId);
-
-    // Debug log
-    console.log("room:", room.value);
-    console.log("buildingRoom:", buildingRoom.value);
+    const data = await roomStore.getById(roomId);
+    room.value = data || {};
   } catch (error) {
     console.error("Error fetching room details:", error);
   }
 });
+
+const goToRoomBooking = () => {
+  router.push(`/user/bookings/bookingroom/${roomId}`);
+};
 </script>
 
 <template>
-  <teleport to="body">
-    <LoadingPage v-if="isLoading" />
-  </teleport>
-  <div class="room-details-container" v-if="buildingRoom">
-    <!-- แถวบนสุด -->
-    <div class="header-row">
-      <h1><i class="fa-solid fa-house-chimney"></i> รายละเอียดห้อง</h1>
-      <h2>
-        ห้อง: {{ buildingRoom.room_name || room?.name || "-" }}
-        <span v-if="buildingRoom.building_name">
-          อาคาร: {{ buildingRoom.building_name }}
-        </span>
-      </h2>
-    </div>
-
-    <!-- รูปภาพตรงกลาง -->
-    <div class="image-container">
-      <img
-        :src="buildingRoom.image_url || room?.image_url || '/images/default-room.jpg'"
-        alt="Room Image"
-        width="400px"
-        height="400px"
-      />
-    </div>
-
-    <!-- แถวล่างที่มีรายละเอียด -->
-    <div class="info-row">
-      <div class="info-box">
-        รายละเอียด : {{ buildingRoom.description || room?.description || "-" }}
+<LoadingPage v-if="isLoading" />
+  <div class="room-details-bg">
+    <div class="room-details-card">
+      <div class="header-row">
+        <div>
+          <h2>
+            <i class="fa-solid fa-house-chimney"></i>
+            รายละเอียดห้อง {{ room.name }}
+          </h2>
+          <h3>
+            <i class="fa-solid fa-building"></i>
+            {{ room.building }}
+          </h3>
+        </div>
       </div>
-      <div class="info-box">
-        จำนวนที่เข้าได้ : {{ buildingRoom.capacity || room?.capacity || "-" }} คน
+      <div class="image-container">
+        <img :src="room.image_url || '/images/default-room.jpg'" alt="Room Image" />
       </div>
-    </div>
-
-    <!-- ปุ่ม -->
-    <div class="button-row">
-      <button class="button-calendar" @click="$router.push('/')">
-        ไปยังหน้าปฏิทินการจอง
-      </button>
-    </div>
-  </div>
-  <div v-else class="room-details-container">
-    <h2>ไม่พบข้อมูลห้องนี้</h2>
-    <div class="button-row">
-      <button class="button-calendar" @click="$router.push('/')">
-        กลับหน้าหลัก
-      </button>
+      <div class="info-row">
+        <div class="info-box">
+          <div class="info-title">
+            <i class="fa-solid fa-align-left"></i> รายละเอียด
+          </div>
+          <div class="info-content">{{ room.description || '-' }}</div>
+        </div>
+        <div class="info-box">
+          <div class="info-title">
+            <i class="fa-solid fa-users"></i> จำนวนที่เข้าได้
+          </div>
+          <div class="info-content">{{ room.capacity || '-' }} คน</div>
+        </div>
+      </div>
+      <div class="button-row">
+        <button class="button-calendar" @click="goToRoomBooking">
+          <i class="fa-solid fa-calendar-days"></i> ปฏิทินการจอง {{ room.name }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.room-details-container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+.room-details-bg {
+  min-height: 65vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 8px;
 }
-
+.room-details-card {
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(88,176,224,0.15), 0 1.5px 6px rgba(67,73,85,0.07);
+  max-width: 540px;
+  width: 100%;
+  padding: 32px 28px 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  position: relative;
+  animation: fadeIn 0.5s;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(24px);}
+  to { opacity: 1; transform: translateY(0);}
+}
 .header-row {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
-
+.header-row h2 {
+  font-size: 1.5rem;
+  color: #222f3e;
+  margin-bottom: 4px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.header-row h3 {
+  font-size: 1.1rem;
+  color: #13131f;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
 .image-container {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 0;
 }
-
 .image-container img {
-  max-width: 100%;
-  height: auto;
+  max-width: 340px;
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
   border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(88,176,224,0.08);
+  background: #f4f8fb;
 }
-
 .info-row {
   display: flex;
-  justify-content: space-between;
-  margin-bottom: 24px;
+  gap: 18px;
+  margin-bottom: 0;
+  flex-wrap: wrap;
 }
-
 .info-box {
-  background-color: #eae8e8;
-  padding: 12px 20px;
-  border-radius: 8px;
-  flex: 1;
-  margin: 0 10px;
-  text-align: center;
-  font-weight: bold;
+  flex: 1 1 180px;
+  background: #f4f8fb;
+  border-radius: 10px;
+  padding: 18px 20px 14px 20px;
+  min-width: 0;
+  box-shadow: 0 1px 4px rgba(88,176,224,0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-
+.info-title {
+  font-size: 1rem;
+  color: #13131f;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 2px;
+}
+.info-content {
+  color: #222f3e;
+  font-size: 1.05rem;
+  font-weight: 500;
+  word-break: break-word;
+}
 .button-row {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  margin-top: 12px;
+  flex-wrap: wrap;
 }
 .button-calendar {
-  background-color: #4caf50;
-  color: white;
-  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 18px;
   border: none;
-  border-radius: 5px;
+  border-radius: 7px;
+  font-size: 1rem;
+  font-weight: bold;
   cursor: pointer;
-  font-size: 16px;
+  transition: background 0.2s, color 0.2s;
+  box-shadow: 0 1px 4px rgba(88,176,224,0.07);
+}
+.button-calendar {
+  background: #13131f;
+  color: #fff;
 }
 .button-calendar:hover {
-  background-color: #45a049;
-  transition: background-color 0.3s ease;
+  background: #4a4a4a;
 }
-
-.button-back {
-  background-color: #f44336;
-  color: white;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 16px;
-}
-.button-back:hover {
-  background-color: #e53935;
-  transition: background-color 0.3s ease;
+@media (max-width: 700px) {
+  .room-details-card {
+    padding: 18px 6px 18px 6px;
+  }
+  .info-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .image-container img {
+    max-width: 100%;
+    height: 180px;
+  }
 }
 </style>

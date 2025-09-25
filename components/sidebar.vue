@@ -238,6 +238,14 @@ function hideTooltip() {
       >
         <i class="fas fa-history"></i> ประวัติการจอง
       </router-link>
+
+       <router-link
+        :to="`/bookingStatistics`"
+        class="home-link"
+        exact-active-class="active-link"
+      >
+        <i class="fa-solid fa-chart-simple"></i> สถิติการจอง
+      </router-link>
     </div>
     <!-- Custom Tooltip Modal -->
     <div
