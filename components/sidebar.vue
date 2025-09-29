@@ -222,6 +222,13 @@ function hideTooltip() {
           <i class="fa-solid fa-pen-nib"></i> จัดการห้อง
         </router-link>
         <router-link
+          to="/admin/equipment"
+          class="home-link"
+          exact-active-class="active-link"
+        >
+          <i class="fa-solid fa-pen-nib"></i> จัดการอุปกรณ์เสริม
+        </router-link>
+        <router-link
           to="/admin/bookings"
           class="home-link"
           exact-active-class="active-link"
@@ -231,6 +238,14 @@ function hideTooltip() {
       </div>
 
       <!-- ประวัติการจอง (ทุกคนเห็นได้) -->
+       <router-link
+        :to="`/user/equipment`"
+        class="home-link"
+        exact-active-class="active-link"
+      >
+        <i class="fa-solid fa-toolbox"></i> อุปกรณ์เสริม
+      </router-link>
+
       <router-link
         :to="`/user/bookings/history/${userId}`"
         class="home-link"
