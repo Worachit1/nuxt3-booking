@@ -19,9 +19,9 @@ export const useRoomStore = defineStore("room", {
           { params: { page, size } }
         );
         if (response.status === 200) {
-          this.rooms = response.data.data || [];
-          // แก้ตรงนี้ให้แน่ใจว่า total ได้ค่าจาก backend
-          this.total = response.data.pagination?.total || 0;
+          const payload = response.data?.data;
+          this.rooms = payload?.data || [];
+          this.total = payload?.pagination?.total || 0;
         } else {
           this.rooms = [];
           this.total = 0;
@@ -41,9 +41,9 @@ export const useRoomStore = defineStore("room", {
           { params: { page, size } }
         );
         if (response.status === 200) {
-          this.rooms = response.data.data || [];
-          // แก้ตรงนี้ให้แน่ใจว่า total ได้ค่าจาก backend
-          this.total = response.data.pagination?.total || 0;
+          const payload = response.data?.data;
+          this.rooms = payload?.data || [];
+          this.total = payload?.pagination?.total || 0;
         } else {
           this.rooms = [];
           this.total = 0;
@@ -74,7 +74,13 @@ export const useRoomStore = defineStore("room", {
         this.isLoading = false;
       }
     },
-    async addRoom(newRoom: Room) {
+    async addRoom(
+      newRoom: Room & {
+        room_type_id?: string;
+        start_room?: number;
+        end_room?: number;
+      }
+    ) {
       this.isLoading = true;
       try {
         const token = localStorage.getItem("token");
@@ -83,6 +89,16 @@ export const useRoomStore = defineStore("room", {
         formData.append("name", newRoom.name);
         formData.append("description", newRoom.description);
         formData.append("capacity", newRoom.capacity.toString());
+
+        if (newRoom.room_type_id) {
+          formData.append("room_type_id", newRoom.room_type_id);
+        }
+        if (typeof newRoom.start_room === "number") {
+          formData.append("start_room", String(newRoom.start_room));
+        }
+        if (typeof newRoom.end_room === "number") {
+          formData.append("end_room", String(newRoom.end_room));
+        }
 
         if (newRoom.image_url instanceof File) {
           formData.append("image_url", newRoom.image_url);

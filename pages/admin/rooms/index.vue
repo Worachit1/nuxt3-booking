@@ -35,7 +35,15 @@ const fetchBuildings = async () => {
 
 const handleBuildingClick = async (building) => {
   selectedBuilding.value = building;
-  rooms.value = building.rooms || [];
+  // Enrich building rooms with full details (start_room, end_room, is_available, maintenance_*)
+  await roomStore.fetchAllRooms(1, 1000);
+  const allRooms = Array.isArray(roomStore.rooms) ? roomStore.rooms : [];
+  const baseRooms = Array.isArray(building.rooms) ? building.rooms : [];
+  const enriched = baseRooms.map((r) => {
+    const full = allRooms.find((ar) => ar.id === r.id) || {};
+    return { ...r, ...full };
+  });
+  rooms.value = enriched;
   total.value = rooms.value.length;
   page.value = 1;
 };
@@ -89,18 +97,20 @@ const handleDeleteRoom = async (room) => {
 
   roomStore.isLoading = true;
   await roomStore.deleteRoom(room.id);
-  
+
   // อัปเดตข้อมูลอาคารใหม่หลังลบห้อง
   await fetchBuildings();
   if (selectedBuilding.value) {
-    const updatedBuilding = buildings.value.find(b => b.id === selectedBuilding.value.id);
+    const updatedBuilding = buildings.value.find(
+      (b) => b.id === selectedBuilding.value.id
+    );
     if (updatedBuilding) {
       selectedBuilding.value = updatedBuilding;
       rooms.value = updatedBuilding.rooms || [];
       total.value = rooms.value.length;
     }
   }
-  
+
   roomStore.isLoading = false;
 
   await Swal.fire({
@@ -156,6 +166,33 @@ const gotoPage = (p) => {
   jumpToPage.value = p;
 };
 
+// Helper: format seconds-of-day to HH:mm for display
+const secondsToHHMM = (secs) => {
+  if (secs === null || secs === undefined) return "-";
+  const n = Number(secs);
+  if (!Number.isFinite(n) || n < 0) return "-";
+  const h = Math.floor(n / 3600) % 24;
+  const m = Math.floor((n % 3600) / 60);
+  const pad = (v) => (v < 10 ? `0${v}` : String(v));
+  return `${pad(h)}:${pad(m)}`;
+};
+
+// Helper: fallback text
+const orBlank = (v) => {
+  if (v === null || v === undefined || v === "") return "";
+  return String(v);
+};
+
+// Normalize availability from boolean/number/string
+const isAvailable = (v) => {
+  if (v === true) return true;
+  if (v === false) return false;
+  if (v === 1 || v === "1") return true;
+  if (v === 0 || v === "0") return false;
+  if (typeof v === "string") return v.toLowerCase() === "true";
+  return !!v;
+};
+
 onMounted(async () => {
   await bookingStore.fetchBookings();
   await fetchBuildings();
@@ -171,7 +208,10 @@ onMounted(async () => {
     <div v-if="!selectedBuilding">
       <div class="header-row">
         <h1><i class="fa-solid fa-building"></i> รายการอาคารทั้งหมด</h1>
-        <button class="btn-create" @click="router.push('/admin/rooms/createRoom')">
+        <button
+          class="btn-create"
+          @click="router.push('/admin/rooms/createRoom')"
+        >
           <i class="fa-solid fa-circle-plus"></i> เพิ่มห้อง
         </button>
       </div>
@@ -184,14 +224,13 @@ onMounted(async () => {
           @click="handleBuildingClick(building)"
         >
           <div class="building-image">
-            <img 
-              :src="building.image_url || '/default-building.jpg'" 
-              :alt="building.name" 
+            <img
+              :src="building.image_url || '/default-building.jpg'"
+              :alt="building.name"
             />
           </div>
           <div class="building-info">
             <h3>{{ building.name }}</h3>
-            <p>{{ building.description || 'ไม่มีรายละเอียด' }}</p>
             <div class="building-stats">
               <span class="room-count">
                 <i class="fa-solid fa-door-open"></i>
@@ -212,34 +251,71 @@ onMounted(async () => {
             <i class="fa-solid fa-arrow-left"></i> กลับไปยังรายการอาคาร
           </button>
           <h1>
-            <i class="fa-solid fa-door-open"></i> 
+            <i class="fa-solid fa-door-open"></i>
             ห้องใน {{ selectedBuilding.name }}
           </h1>
         </div>
-        <button class="btn-create" @click="router.push('/admin/rooms/createRoom')">
+        <button
+          class="btn-create"
+          @click="router.push('/admin/rooms/createRoom')"
+        >
           <i class="fa-solid fa-circle-plus"></i> เพิ่มห้อง
         </button>
       </div>
 
-      <table class="table table-bordered table-striped" v-if="paginatedRooms.length">
+      <table
+        class="table table-bordered table-striped"
+        v-if="paginatedRooms.length"
+      >
         <thead>
           <tr>
             <th>รูปภาพ</th>
             <th>ชื่อห้อง</th>
             <th>จำนวนที่เข้าประชุมได้</th>
             <th>คำอธิบาย</th>
+            <th>เวลาเปิด</th>
+            <th>เวลาปิด</th>
+            <th>สถานะห้อง</th>
+            <th>ปรับปรุงห้อง</th>
+            <th>คาดว่าจะเสร็จ(ชม. นาที)</th>
             <th>จัดการ</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(room, idx) in paginatedRooms" :key="room.id" class="room-cell"
-            :class="{ 'alt-row': paginatedRooms.length > 2 && idx % 2 === 1 }">
+          <tr
+            v-for="(room, idx) in paginatedRooms"
+            :key="room.id"
+            class="room-cell"
+            :class="{ 'alt-row': paginatedRooms.length > 2 && idx % 2 === 1 }"
+          >
             <td>
               <img :src="room.image_url" alt="room" width="100" height="100" />
             </td>
             <td>{{ room.name }}</td>
             <td>{{ room.capacity }}</td>
             <td>{{ room.description }}</td>
+            <td>{{ secondsToHHMM(room.start_room) }}</td>
+            <td>{{ secondsToHHMM(room.end_room) }}</td>
+            <td>
+              <span
+                class="status-pill"
+                :class="
+                  isAvailable(room.is_available) ? 'available' : 'unavailable'
+                "
+              >
+                <span
+                  class="status-dot"
+                  :class="isAvailable(room.is_available) ? 'green' : 'red'"
+                ></span>
+                {{
+                  isAvailable(room.is_available)
+                    ? "พร้อมใช้งาน"
+                    : "ไม่พร้อมใช้งาน"
+                }}
+              </span>
+            </td>
+            <td>{{ orBlank(room.maintenance_note) }}</td>
+            <td>{{ orBlank(room.maintenance_eta) }}</td>
             <td>
               <button class="btn-detail" @click="goTodetail(room.id)">
                 <i class="fa-solid fa-info"></i> ดูข้อมูล
@@ -297,11 +373,11 @@ onMounted(async () => {
   margin: 20px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   padding-bottom: 80px;
-  height: calc(100vh - 110px); 
+  height: calc(100vh - 110px);
   max-height: calc(100vh - 110px);
-  min-height: 400px; 
+  min-height: 400px;
   overflow-y: auto;
-  background: #fff; 
+  background: #fff;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -455,6 +531,38 @@ td:last-child {
   align-items: center;
 }
 
+/* Availability status styles */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 12px;
+  color: #fff;
+}
+.status-pill.available {
+  background: #28a745;
+}
+.status-pill.unavailable {
+  background: #dc3545;
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.status-dot.green {
+  color: #d4edda;
+  background: #d4edda;
+}
+.status-dot.red {
+  color: #f8d7da;
+  background: #f8d7da;
+}
+
 button {
   padding: 5px 10px;
   border: none;
@@ -523,7 +631,7 @@ h1 {
   bottom: 0;
   width: 100%;
   background: #fafafa;
-  box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
   justify-content: center;
   text-align: center;
   z-index: 100;
@@ -533,9 +641,9 @@ h1 {
 
 .pagination {
   display: flex;
-  justify-content: center; 
+  justify-content: center;
   align-items: center;
-  flex-wrap: wrap; 
+  flex-wrap: wrap;
   gap: 5px;
 }
 
@@ -588,13 +696,13 @@ h1 {
   .buildings-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .header-row {
     flex-direction: column;
     gap: 15px;
     align-items: flex-start;
   }
-  
+
   .breadcrumb {
     flex-direction: column;
     align-items: flex-start;

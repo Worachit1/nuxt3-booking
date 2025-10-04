@@ -137,8 +137,7 @@ const todayBookings = computed(() => {
   const tomorrow = today.add(1, "day");
   return events.value.filter(
     (event) =>
-      dayjs(event.start).isAfter(today) &&
-      dayjs(event.start).isBefore(tomorrow)
+      dayjs(event.start).isAfter(today) && dayjs(event.start).isBefore(tomorrow)
   );
 });
 
@@ -213,6 +212,7 @@ function handleDateClick(info) {
 
   selectedDate.value = info.dateStr;
   showCreateModal.value = true;
+  console.log("roomId:", roomId.value, "selectedDate:", selectedDate.value);
 }
 
 function closeCreateModal() {
@@ -278,14 +278,14 @@ const calendarOptions = computed(() => ({
   dateClick: handleDateClick,
   // ป้องกันการคลิกในวันที่ผ่านไปแล้ว
   selectConstraint: {
-    start: dayjs().format('YYYY-MM-DD'),
+    start: dayjs().format("YYYY-MM-DD"),
   },
   // เพิ่ม view options
   views: {
     timeGridWeek: {
-      titleFormat: { year: 'numeric', month: 'long', day: 'numeric' }
-    }
-  }
+      titleFormat: { year: "numeric", month: "long", day: "numeric" },
+    },
+  },
 }));
 </script>
 
@@ -303,19 +303,47 @@ const calendarOptions = computed(() => ({
             <span>ปฏิทินการจอง</span>
           </div>
           <div class="room-search">
-            <label style="margin-right: 7px; font-weight: bold">เลือกอาคาร:</label>
-            <el-select v-model="selectedBuildingId" placeholder="--- กรุณาเลือกอาคาร ---"
-              style="width: 200px; margin-right: 10px" filterable popper-class="custom-el-dropdown">
-              <el-option v-for="building in buildings" :key="building.id" :label="building.name" :value="building.id" />
+            <label style="margin-right: 7px; font-weight: bold"
+              >เลือกอาคาร:</label
+            >
+            <el-select
+              v-model="selectedBuildingId"
+              placeholder="--- กรุณาเลือกอาคาร ---"
+              style="width: 200px; margin-right: 10px"
+              filterable
+              popper-class="custom-el-dropdown"
+            >
+              <el-option
+                v-for="building in buildings"
+                :key="building.id"
+                :label="building.name"
+                :value="building.id"
+              />
             </el-select>
 
-            <label style="margin-right: 7px; font-weight: bold">เลือกห้อง:</label>
-            <el-select v-model="selectedRoomId" placeholder="--- กรุณาเลือกห้อง ---"
-              style="width: 200px; margin-right: 10px" :disabled="!selectedBuildingId" filterable
-              popper-class="custom-el-dropdown">
-              <el-option v-for="room in filteredRooms" :key="room.id" :label="room.name" :value="room.id" />
+            <label style="margin-right: 7px; font-weight: bold"
+              >เลือกห้อง:</label
+            >
+            <el-select
+              v-model="selectedRoomId"
+              placeholder="--- กรุณาเลือกห้อง ---"
+              style="width: 200px; margin-right: 10px"
+              :disabled="!selectedBuildingId"
+              filterable
+              popper-class="custom-el-dropdown"
+            >
+              <el-option
+                v-for="room in filteredRooms"
+                :key="room.id"
+                :label="room.name"
+                :value="room.id"
+              />
             </el-select>
-            <button class="search-button" @click="goToRoomBooking" :disabled="!selectedRoomId">
+            <button
+              class="search-button"
+              @click="goToRoomBooking"
+              :disabled="!selectedRoomId"
+            >
               <i class="fa-solid fa-magnifying-glass"></i> ไปยังห้องที่เลือก
             </button>
           </div>
@@ -327,7 +355,11 @@ const calendarOptions = computed(() => ({
               <span>ห้อง: {{ roomName }}</span>
             </div>
             <div class="calendar-search">
-              <label for="search-date" style="margin-right: 7px; font-weight: bold">ค้นหาวันที่:</label>
+              <label
+                for="search-date"
+                style="margin-right: 7px; font-weight: bold"
+                >ค้นหาวันที่:</label
+              >
               <input type="date" v-model="searchDate" class="date-input" />
               <button @click="goToDate" class="search-button">
                 <i class="fa-solid fa-magnifying-glass"></i> ไปยังวันที่เลือก
@@ -354,7 +386,12 @@ const calendarOptions = computed(() => ({
           </h2>
 
           <div v-if="todayBookings.length > 0">
-            <table border="1" cellpadding="8" cellspacing="0" style="width: 100%; margin-bottom: 20px">
+            <table
+              border="1"
+              cellpadding="8"
+              cellspacing="0"
+              style="width: 100%; margin-bottom: 20px"
+            >
               <thead>
                 <tr class="header-row">
                   <th>หัวข้อ</th>
@@ -367,10 +404,14 @@ const calendarOptions = computed(() => ({
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(event, index) in todayBookings" :key="index" :class="[
-                  index % 2 === 0 ? 'row-even' : 'row-odd',
-                  event.status === 'Finished' ? 'row-finished' : ''
-                ]">
+                <tr
+                  v-for="(event, index) in todayBookings"
+                  :key="index"
+                  :class="[
+                    index % 2 === 0 ? 'row-even' : 'row-odd',
+                    event.status === 'Finished' ? 'row-finished' : '',
+                  ]"
+                >
                   <td>{{ event.title }}</td>
                   <td>{{ event.description }}</td>
                   <td>{{ formatDateTime(event.start) }}</td>
@@ -378,17 +419,22 @@ const calendarOptions = computed(() => ({
                   <td>{{ event.first_name }} {{ event.last_name }}</td>
                   <td>{{ event.room_name }}</td>
                   <td>
-                    <span :class="[
-                      'status-badge',
-                      event.status === 'Approved' ? 'status-approved' : '',
-                      event.status === 'Pending' ? 'status-pending' : '',
-                      event.status === 'Finished' ? 'status-finished' : ''
-                    ]">
+                    <span
+                      :class="[
+                        'status-badge',
+                        event.status === 'Approved' ? 'status-approved' : '',
+                        event.status === 'Pending' ? 'status-pending' : '',
+                        event.status === 'Finished' ? 'status-finished' : '',
+                      ]"
+                    >
                       {{
-                        event.status === 'Approved' ? 'อนุมัติ' :
-                          event.status === 'Pending' ? 'รอการอนุมัติ' :
-                            event.status === 'Finished' ? 'เสร็จสิ้น' :
-                              event.status
+                        event.status === "Approved"
+                          ? "อนุมัติ"
+                          : event.status === "Pending"
+                          ? "รอการอนุมัติ"
+                          : event.status === "Finished"
+                          ? "เสร็จสิ้น"
+                          : event.status
                       }}
                     </span>
                   </td>
@@ -407,11 +453,20 @@ const calendarOptions = computed(() => ({
           <div v-if="hasApprovedBookings">
             <div v-for="(events, date) in dailyBookings" :key="date">
               <!-- กรองเฉพาะที่ Approved -->
-              <template v-if="events.filter(e => e.status === 'Approved').length > 0">
+              <template
+                v-if="events.filter((e) => e.status === 'Approved').length > 0"
+              >
                 <h3>
-                  {{ dayjs(date, "YYYY-MM-DD").locale("th").format("D MMMM YYYY") }}
+                  {{
+                    dayjs(date, "YYYY-MM-DD").locale("th").format("D MMMM YYYY")
+                  }}
                 </h3>
-                <table border="1" cellpadding="8" cellspacing="0" style="width: 100%; margin-bottom: 20px">
+                <table
+                  border="1"
+                  cellpadding="8"
+                  cellspacing="0"
+                  style="width: 100%; margin-bottom: 20px"
+                >
                   <thead>
                     <tr class="header-row">
                       <th>หัวข้อ</th>
@@ -424,8 +479,13 @@ const calendarOptions = computed(() => ({
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(event, index) in events.filter(e => e.status === 'Approved')" :key="index"
-                      :class="[index % 2 === 0 ? 'row-even' : 'row-odd']">
+                    <tr
+                      v-for="(event, index) in events.filter(
+                        (e) => e.status === 'Approved'
+                      )"
+                      :key="index"
+                      :class="[index % 2 === 0 ? 'row-even' : 'row-odd']"
+                    >
                       <td>{{ event.title }}</td>
                       <td>{{ event.description }}</td>
                       <td>{{ formatDateTime(event.start) }}</td>
@@ -433,7 +493,9 @@ const calendarOptions = computed(() => ({
                       <td>{{ event.first_name }} {{ event.last_name }}</td>
                       <td>{{ event.room_name }}</td>
                       <td>
-                        <span class="status-badge status-approved">อนุมัติ</span>
+                        <span class="status-badge status-approved"
+                          >อนุมัติ</span
+                        >
                       </td>
                     </tr>
                   </tbody>
@@ -443,7 +505,6 @@ const calendarOptions = computed(() => ({
           </div>
           <div v-else>ไม่มีข้อมูลการจอง</div>
         </div>
-
       </div>
     </div>
 
@@ -477,17 +538,28 @@ const calendarOptions = computed(() => ({
             </p>
             <p>
               <strong>สถานะ:</strong>
-              <span :class="[
-                'status-badge',
-                selectedEvent?.extendedProps?.status === 'Approved' ? 'status-approved' : '',
-                selectedEvent?.extendedProps?.status === 'Pending' ? 'status-pending' : '',
-                selectedEvent?.extendedProps?.status === 'Finished' ? 'status-finished' : ''
-              ]">
+              <span
+                :class="[
+                  'status-badge',
+                  selectedEvent?.extendedProps?.status === 'Approved'
+                    ? 'status-approved'
+                    : '',
+                  selectedEvent?.extendedProps?.status === 'Pending'
+                    ? 'status-pending'
+                    : '',
+                  selectedEvent?.extendedProps?.status === 'Finished'
+                    ? 'status-finished'
+                    : '',
+                ]"
+              >
                 {{
-                  selectedEvent?.extendedProps?.status === 'Approved' ? 'อนุมัติ' :
-                    selectedEvent?.extendedProps?.status === 'Pending' ? 'รอการอนุมัติ' :
-                      selectedEvent?.extendedProps?.status === 'Finished' ? 'เสร็จสิ้น' :
-                        selectedEvent?.extendedProps?.status
+                  selectedEvent?.extendedProps?.status === "Approved"
+                    ? "อนุมัติ"
+                    : selectedEvent?.extendedProps?.status === "Pending"
+                    ? "รอการอนุมัติ"
+                    : selectedEvent?.extendedProps?.status === "Finished"
+                    ? "เสร็จสิ้น"
+                    : selectedEvent?.extendedProps?.status
                 }}
               </span>
             </p>
@@ -508,11 +580,27 @@ const calendarOptions = computed(() => ({
             สร้างการจองใหม่
           </div>
           <div class="popup-body">
-            <p>วันที่ที่เลือก: <b>{{ selectedDate }}</b></p>
-            <button class="booking-button"
-              @click="router.push(`/user/bookings/createBooking/${roomId}?date=${selectedDate}`)">
+            <p>
+              วันที่ที่เลือก: <b>{{ selectedDate }}</b>
+            </p>
+            <button
+              class="booking-button"
+              @click="
+                () => {
+                  console.log(
+                    'router.push',
+                    `/user/bookings/createBooking/${roomId}?date=${selectedDate}`
+                  );
+                  router.push(
+                    `/user/bookings/createBooking/${roomId}?date=${selectedDate}`
+                  );
+                }
+              "
+            >
               จองวันที่
-              <b>{{ dayjs(selectedDate).locale("th").format("D MMMM YYYY") }}</b>
+              <b>{{
+                dayjs(selectedDate).locale("th").format("D MMMM YYYY")
+              }}</b>
             </button>
           </div>
           <div class="popup-footer">

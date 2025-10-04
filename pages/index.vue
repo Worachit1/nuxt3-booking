@@ -23,8 +23,8 @@ const buildingRooms = ref([]);
 const selectedRoom = ref(null);
 
 // Search states
-const searchRoomName = ref('');
-const searchCapacity = ref('');
+const searchRoomName = ref("");
+const searchCapacity = ref("");
 const showRoomDropdown = ref(false);
 
 // Modal states
@@ -37,7 +37,7 @@ onMounted(async () => {
   try {
     await buildingStore.fetchBuildings();
     buildings.value = buildingStore.buildings;
-    console.log('Buildings data:', buildings.value); // Debug
+    console.log("Buildings data:", buildings.value); // Debug
   } catch (error) {
     console.error("onMounted error:", error);
   } finally {
@@ -50,8 +50,15 @@ const handleBuildingClick = async (building) => {
   loading.value = true;
   try {
     selectedBuilding.value = building;
-    buildingRooms.value = building.rooms || [];
-    console.log('Building rooms:', buildingRooms.value); // Debug
+    // Enrich from rooms API to ensure operational fields are available
+    await roomStore.fetchAllRooms(1, 1000);
+    const allRooms = Array.isArray(roomStore.rooms) ? roomStore.rooms : [];
+    const baseRooms = Array.isArray(building.rooms) ? building.rooms : [];
+    buildingRooms.value = baseRooms.map((r) => {
+      const full = allRooms.find((ar) => ar.id === r.id) || {};
+      return { ...r, ...full };
+    });
+    console.log("Building rooms (enriched):", buildingRooms.value); // Debug
   } catch (error) {
     console.error("Error fetching building rooms:", error);
   } finally {
@@ -64,7 +71,7 @@ const handleRoomClick = async (room) => {
   try {
     selectedRoom.value = room;
     roomModalVisible.value = true;
-    console.log('Selected room:', selectedRoom.value); // Debug
+    console.log("Selected room:", selectedRoom.value); // Debug
   } catch (error) {
     console.error("Error fetching room details:", error);
   } finally {
@@ -85,8 +92,8 @@ const goBackToBuildings = () => {
   selectedBuilding.value = null;
   buildingRooms.value = [];
   // Reset search when going back
-  searchRoomName.value = '';
-  searchCapacity.value = '';
+  searchRoomName.value = "";
+  searchCapacity.value = "";
   showRoomDropdown.value = false;
 };
 
@@ -103,8 +110,8 @@ const filteredRooms = computed(() => {
 // Filtered rooms for dropdown
 const filteredRoomOptions = computed(() => {
   if (!buildingRooms.value.length) return [];
-  
-  return buildingRooms.value.filter(room => 
+
+  return buildingRooms.value.filter((room) =>
     room.name.toLowerCase().includes(searchRoomName.value.toLowerCase())
   );
 });
@@ -112,24 +119,26 @@ const filteredRoomOptions = computed(() => {
 // Filtered rooms based on search criteria
 const filteredBuildingRooms = computed(() => {
   if (!buildingRooms.value.length) return [];
-  
-  return buildingRooms.value.filter(room => {
+
+  return buildingRooms.value.filter((room) => {
     // Filter by room name
-    const nameMatch = !searchRoomName.value || 
+    const nameMatch =
+      !searchRoomName.value ||
       room.name.toLowerCase().includes(searchRoomName.value.toLowerCase());
-    
+
     // Filter by capacity (greater than or equal to search value)
-    const capacityMatch = !searchCapacity.value || 
+    const capacityMatch =
+      !searchCapacity.value ||
       (room.capacity && room.capacity >= parseInt(searchCapacity.value));
-    
+
     return nameMatch && capacityMatch;
   });
 });
 
 // Clear search filters
 const clearSearch = () => {
-  searchRoomName.value = '';
-  searchCapacity.value = '';
+  searchRoomName.value = "";
+  searchCapacity.value = "";
   showRoomDropdown.value = false;
 };
 
@@ -146,18 +155,39 @@ const handleRoomInputFocus = () => {
 
 // Handle click outside to close dropdown
 const handleClickOutside = (event) => {
-  if (!event.target.closest('.room-name-search')) {
+  if (!event.target.closest(".room-name-search")) {
     showRoomDropdown.value = false;
   }
 };
 
 onMounted(() => {
-  document.addEventListener('click', handleClickOutside);
+  document.addEventListener("click", handleClickOutside);
 });
 
 onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
+  document.removeEventListener("click", handleClickOutside);
 });
+
+// Helpers: time format and availability
+const secondsToHHMM = (secs) => {
+  if (secs === null || secs === undefined) return "-";
+  const n = Number(secs);
+  if (!Number.isFinite(n) || n < 0) return "-";
+  const h = Math.floor(n / 3600) % 24;
+  const m = Math.floor((n % 3600) / 60);
+  const pad = (v) => (v < 10 ? `0${v}` : String(v));
+  return `${pad(h)}:${pad(m)}`;
+};
+const isAvailable = (v) => {
+  if (v === true) return true;
+  if (v === false) return false;
+  if (v === 1 || v === "1") return true;
+  if (v === 0 || v === "0") return false;
+  if (typeof v === "string") return v.toLowerCase() === "true";
+  return !!v;
+};
+const orBlank = (v) =>
+  v === null || v === undefined || v === "" ? "ว่าง" : String(v);
 </script>
 
 <template>
@@ -176,9 +206,11 @@ onUnmounted(() => {
       </div>
 
       <!-- 🏠 ค้นหาห้อง (Element Plus - ซ่อนไว้ก่อน) -->
-      <div class="search-section" style="display: none;">
+      <div class="search-section" style="display: none">
         <div class="search-container">
-          <label style="margin-right: 7px; font-weight: bold">เลือกอาคาร:</label>
+          <label style="margin-right: 7px; font-weight: bold"
+            >เลือกอาคาร:</label
+          >
           <el-select
             v-model="selectedBuildingId"
             placeholder="--- กรุณาเลือกอาคาร ---"
@@ -230,7 +262,10 @@ onUnmounted(() => {
               @click="handleBuildingClick(building)"
             >
               <div class="building-image">
-                <img :src="building.image_url || '/default-building.jpg'" :alt="building.name" />
+                <img
+                  :src="building.image_url || '/default-building.jpg'"
+                  :alt="building.name"
+                />
               </div>
               <div class="building-info">
                 <h3>{{ building.name }}</h3>
@@ -251,7 +286,7 @@ onUnmounted(() => {
             <button @click="goBackToBuildings" class="back-button">
               <i class="fa-solid fa-arrow-left"></i> กลับไปยังรายการอาคาร
             </button>
-            
+
             <!-- Search Section -->
             <div class="room-search-section">
               <div class="search-header">
@@ -273,8 +308,8 @@ onUnmounted(() => {
                       @focus="handleRoomInputFocus"
                       @input="showRoomDropdown = true"
                     />
-                    <div 
-                      v-if="showRoomDropdown && filteredRoomOptions.length > 0" 
+                    <div
+                      v-if="showRoomDropdown && filteredRoomOptions.length > 0"
                       class="dropdown-menu"
                     >
                       <div
@@ -318,14 +353,21 @@ onUnmounted(() => {
               </h2>
               <p>
                 แสดง {{ filteredBuildingRooms.length }} ห้อง
-                {{ buildingRooms.length !== filteredBuildingRooms.length ? `จากทั้งหมด ${buildingRooms.length} ห้อง` : '' }}
+                {{
+                  buildingRooms.length !== filteredBuildingRooms.length
+                    ? `จากทั้งหมด ${buildingRooms.length} ห้อง`
+                    : ""
+                }}
               </p>
             </div>
           </div>
 
           <!-- No results message -->
           <div v-if="filteredBuildingRooms.length === 0" class="no-results">
-            <i class="fa-solid fa-search" style="font-size: 3rem; color: #6c757d; margin-bottom: 1rem;"></i>
+            <i
+              class="fa-solid fa-search"
+              style="font-size: 3rem; color: #6c757d; margin-bottom: 1rem"
+            ></i>
             <h3>ไม่พบห้องที่ตรงกับเงื่อนไข</h3>
             <p>กรุณาลองปรับเงื่อนไขการค้นหา</p>
             <button @click="clearSearch" class="clear-button">
@@ -342,28 +384,38 @@ onUnmounted(() => {
               @click="handleRoomClick(room)"
             >
               <div class="room-image">
-                <img :src="room.image_url || '/default-room.jpg'" :alt="room.name" />
+                <img
+                  :src="room.image_url || '/default-room.jpg'"
+                  :alt="room.name"
+                />
+                <div
+                  v-if="!isAvailable(room.is_available)"
+                  class="unavailable-badge"
+                >
+                  กำลังปรับปรุง
+                </div>
               </div>
               <div class="room-info">
                 <h3>{{ room.name }}</h3>
-                <p>{{ room.description || 'ไม่มีรายละเอียด' }}</p>
+                <p>{{ room.description || "ไม่มีรายละเอียด" }}</p>
                 <div class="room-stats">
                   <span class="capacity">
                     <i class="fa-solid fa-users"></i>
                     {{ room.capacity || 0 }} คน
+                  </span>
+                  <span
+                    class="time-range"
+                    v-if="room.start_room != null && room.end_room != null"
+                  >
+                    <i class="fa-regular fa-clock"></i>
+                    {{ secondsToHHMM(room.start_room) }} -
+                    {{ secondsToHHMM(room.end_room) }}
                   </span>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-
-      <!-- ปุ่มจองห้อง -->
-      <div class="action-section">
-        <a class="create-booking-button" href="/user/bookings/createBooking">
-          <i class="fa-solid fa-calendar-plus"></i> สร้างการจองใหม่
-        </a>
       </div>
     </div>
 
@@ -382,17 +434,78 @@ onUnmounted(() => {
           </div>
           <div class="modal-body">
             <div class="room-detail-image">
-              <img :src="selectedRoom?.image_url || '/default-room.jpg'" :alt="selectedRoom?.name" />
+              <img
+                :src="selectedRoom?.image_url || '/default-room.jpg'"
+                :alt="selectedRoom?.name"
+              />
             </div>
             <div class="room-details">
               <p><strong>ชื่อห้อง:</strong> {{ selectedRoom?.name }}</p>
-              <p><strong>รายละเอียด:</strong> {{ selectedRoom?.description || 'ไม่มีรายละเอียด' }}</p>
-              <p><strong>ความจุ:</strong> {{ selectedRoom?.capacity || 0 }} ที่นั่ง</p>
+              <p>
+                <strong>รายละเอียด:</strong>
+                {{ selectedRoom?.description || "ไม่มีรายละเอียด" }}
+              </p>
+              <p>
+                <strong>ความจุ:</strong>
+                {{ selectedRoom?.capacity || 0 }} ที่นั่ง
+              </p>
+              <p v-if="selectedRoom">
+                <strong>เวลาเปิด-ปิด:</strong>
+                {{ secondsToHHMM(selectedRoom.start_room) }} -
+                {{ secondsToHHMM(selectedRoom.end_room) }}
+              </p>
+              <p>
+                <strong>สถานะห้อง:</strong>
+                <span
+                  class="status-pill"
+                  :class="
+                    isAvailable(selectedRoom?.is_available)
+                      ? 'available'
+                      : 'unavailable'
+                  "
+                >
+                  <span
+                    class="status-dot"
+                    :class="
+                      isAvailable(selectedRoom?.is_available) ? 'green' : 'red'
+                    "
+                  ></span>
+                  {{
+                    isAvailable(selectedRoom?.is_available)
+                      ? "พร้อมใช้งาน"
+                      : "ไม่พร้อมใช้งาน"
+                  }}
+                </span>
+              </p>
+              <div
+                v-if="!isAvailable(selectedRoom?.is_available)"
+                class="maintenance-box"
+              >
+                <p class="maintenance-title">กำลังปรับปรุง</p>
+                <p>
+                  <strong>หมายเหตุ:</strong>
+                  {{ orBlank(selectedRoom?.maintenance_note) }}
+                </p>
+                <p>
+                  <strong>คาดว่าจะเสร็จ:</strong>
+                  {{ orBlank(selectedRoom?.maintenance_eta) }}
+                </p>
+              </div>
             </div>
           </div>
           <div class="modal-footer">
-            <button @click="goToRoomBooking(selectedRoom.id)" class="booking-button">
-              <i class="fa-solid fa-calendar-plus"></i> ไปยังหน้าจองห้อง
+            <button
+              @click="goToRoomBooking(selectedRoom.id)"
+              class="booking-button"
+              :disabled="!isAvailable(selectedRoom?.is_available)"
+              :class="{ disabled: !isAvailable(selectedRoom?.is_available) }"
+            >
+              <i class="fa-solid fa-calendar-plus"></i>
+              {{
+                isAvailable(selectedRoom?.is_available)
+                  ? "ไปยังหน้าจองห้อง"
+                  : "กำลังปรับปรุง"
+              }}
             </button>
             <button @click="closeRoomModal" class="cancel-button">
               <i class="fa-solid fa-xmark"></i> ปิด
@@ -936,6 +1049,84 @@ onUnmounted(() => {
 
 .cancel-button:hover {
   transform: translateY(-2px);
+}
+
+/* Unavailable badge on room card */
+.room-image {
+  position: relative;
+}
+.unavailable-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #dc3545;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Time range snippet */
+.time-range {
+  color: #6c757d;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Disabled booking state */
+.booking-button.disabled,
+.booking-button:disabled {
+  background: #adb5bd;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+/* Status pill in modal: make unavailable red text */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 12px;
+}
+.status-pill.available {
+  background: #e6f4ea;
+  color: #198754;
+  border: 1px solid #198754;
+}
+.status-pill.unavailable {
+  background: #ffe5e5; /* light red background */
+  color: #dc3545; /* red text */
+  border: 1px solid #dc3545;
+}
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.status-dot.green {
+  background: #198754;
+}
+.status-dot.red {
+  background: #dc3545;
+}
+
+/* Maintenance info box */
+.maintenance-box {
+  border: 1px solid #dc3545;
+  background: #fff5f5;
+  color: #842029;
+  padding: 12px;
+  border-radius: 8px;
+}
+.maintenance-title {
+  margin: 0 0 8px 0;
+  font-weight: 800;
 }
 
 /* Animations */

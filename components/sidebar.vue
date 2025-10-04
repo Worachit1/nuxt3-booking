@@ -2,9 +2,10 @@
 import { onMounted, ref, computed, defineProps, defineEmits } from "vue";
 import { useBuildingStore } from "@/store/buildingStore";
 import { useUserStore } from "@/store/userStore";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 
 const route = useRoute();
+const router = useRouter();
 const userId = route.params.id || localStorage.getItem("user_id");
 const userRole =
   route.params.role_name ??
@@ -37,6 +38,15 @@ const filteredRooms = (building) => {
 };
 const toggleRoom = (roomName) => {
   openRoomName.value = openRoomName.value === roomName ? null : roomName;
+};
+
+const getRoomName = (room) => room?.name ?? String(room ?? "");
+const getRoomId = (room) => room?.id ?? room?.room_id ?? room?.value ?? null;
+const goToRoom = (room) => {
+  const id = getRoomId(room);
+  if (id != null) {
+    router.push(`/user/bookings/bookingroom/${id}`);
+  }
 };
 onMounted(async () => {
   await buildingStore.fetchBuildings();
@@ -88,7 +98,7 @@ function hideTooltip() {
       <div>
         <router-link to="/" class="home-link-header">
           <img
-            src="/public/images/logo_sidebar.png"
+            src="/images/logo_sidebar.png"
             alt="menu"
             style="
               width: 100px;
@@ -145,35 +155,53 @@ function hideTooltip() {
           <!-- รายการห้องในอาคาร -->
           <ul v-if="openBuildingId === b.id" class="dropdown-sub">
             <li
-              v-for="room in b.rooms_name"
-              :key="room.id"
+              v-for="room in (b.rooms_name || b.rooms || [])"
+              :key="getRoomId(room) ?? getRoomName(room)"
               class="dropdown-sub-item"
             >
-              <div
-                @click="
-                  openRoomName = openRoomName === room.name ? null : room.name
-                "
-                class="room-link"
-                style="cursor: pointer"
-                @mouseenter="showTooltip(room.name, $event)"
-                @mouseleave="hideTooltip"
-                @mousemove="showTooltip(room.name, $event)"
-              >
-                <i class="fa-solid fa-archway"></i> {{ room.name }}
-                <i
-                  :class="
-                    openRoomName === room.name
-                      ? 'fas fa-chevron-up ml-1'
-                      : 'fas fa-chevron-down ml-1'
-                  "
-                ></i>
+              <div class="room-row">
+                <router-link
+                  :to="`/user/bookings/bookingroom/${getRoomId(room)}`"
+                  class="room-link"
+                  style="cursor: pointer"
+                  @mouseenter="showTooltip(getRoomName(room), $event)"
+                  @mouseleave="hideTooltip"
+                  @mousemove="showTooltip(getRoomName(room), $event)"
+                  v-if="getRoomId(room) != null"
+                >
+                  <i class="fa-solid fa-archway"></i> {{ getRoomName(room) }}
+                </router-link>
+                <span
+                  v-else
+                  class="room-link"
+                  style="cursor: not-allowed; opacity: .6;"
+                  @mouseenter="showTooltip(getRoomName(room), $event)"
+                  @mouseleave="hideTooltip"
+                  @mousemove="showTooltip(getRoomName(room), $event)"
+                >
+                  <i class="fa-solid fa-archway"></i> {{ getRoomName(room) }}
+                </span>
+                <button
+                  class="chevron-btn"
+                  @click.stop="toggleRoom(getRoomName(room))"
+                  :aria-expanded="openRoomName === getRoomName(room)"
+                  :title="openRoomName === getRoomName(room) ? 'ยุบ' : 'ขยาย'"
+                >
+                  <i
+                    :class="
+                      openRoomName === getRoomName(room)
+                        ? 'fas fa-chevron-up ml-1'
+                        : 'fas fa-chevron-down ml-1'
+                    "
+                  ></i>
+                </button>
               </div>
 
               <!-- ชั้นสอง: รายการภายใต้ห้องนั้น -->
-              <ul v-if="openRoomName === room.name" class="dropdown-sub-sub">
+              <ul v-if="openRoomName === getRoomName(room)" class="dropdown-sub-sub">
                 <li>
                   <router-link
-                    :to="`/user/bookings/bookingroom/${room.id}`"
+                    :to="`/user/bookings/bookingroom/${getRoomId(room)}`"
                     class="dropdown-sub-item"
                     exact-active-class="active-link"
                     style="font-size: 12px"
@@ -183,7 +211,7 @@ function hideTooltip() {
                 </li>
                 <li>
                   <router-link
-                    :to="`/user/bookings/detailroom/${room.id}`"
+                    :to="`/user/bookings/detailroom/${getRoomId(room)}`"
                     class="dropdown-sub-item"
                     exact-active-class="active-link"
                     style="font-size: 12px"
@@ -197,13 +225,6 @@ function hideTooltip() {
         </li>
       </ul>
 
-      <router-link
-        to="/user/bookings/createBooking"
-        class="home-link"
-        exact-active-class="active-link"
-      >
-        <i class="fas fa-edit"></i> จองห้องประชุม
-      </router-link>
 
       <!-- เฉพาะ Admin เท่านั้น -->
       <div v-if="isAdmin">
@@ -214,6 +235,7 @@ function hideTooltip() {
         >
           <i class="fa-solid fa-pen-nib"></i> จัดการอาคาร
         </router-link>
+
         <router-link
           to="/admin/rooms"
           class="home-link"
@@ -234,6 +256,14 @@ function hideTooltip() {
           exact-active-class="active-link"
         >
           <i class="fas fa-receipt"></i> รายการจองห้อง
+        </router-link>
+
+         <router-link
+          to="/admin/reports"
+          class="home-link"
+          exact-active-class="active-link"
+        >
+          <i class="fa-solid fa-pen-nib"></i> จัดการแจ้งรายงานปัญหา
         </router-link>
       </div>
 
@@ -260,6 +290,14 @@ function hideTooltip() {
         exact-active-class="active-link"
       >
         <i class="fa-solid fa-chart-simple"></i> สถิติการจอง
+      </router-link>
+
+       <router-link
+        :to="`/user/reports`"
+        class="home-link"
+        exact-active-class="active-link"
+      >
+       <i class="fa-solid fa-circle-info"></i> แจ้งการรายงานห้อง
       </router-link>
     </div>
     <!-- Custom Tooltip Modal -->

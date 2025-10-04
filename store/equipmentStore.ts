@@ -45,6 +45,24 @@ export const useEquipmentStore = defineStore("equipment", {
       }
     },
 
+     async getAvailableById(id: string) {
+      this.isLoading = true;
+      try {
+        const response = await axios.get(
+          `${config.public.apiBase}/api/v1/equipments/available/${id}`
+        );
+        if (response.status === 200) {
+          return response.data.data;
+        } else {
+          console.error("Error fetching equipment:", response.statusText);
+        }
+      } catch (error) {
+        console.error("Error fetching equipment:", error);
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
     // ✅ ใช้ FormData สำหรับสร้างอาคารใหม่
     async addEquipment(formData: FormData) {
       this.isLoading = true;

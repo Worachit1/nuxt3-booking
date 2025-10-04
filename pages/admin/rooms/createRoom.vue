@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 
@@ -8,6 +8,7 @@ import LoadingPage from "@/components/Loading.vue";
 import { useRoomStore } from "@/store/roomStore";
 import { useBuildingStore } from "@/store/buildingStore";
 import { useBuilding_RoomStore } from "~/store/building_roomStore";
+import { useRoom_Types } from "@/store/room_typeStore";
 definePageMeta({
   middleware: ["load-user"],
 });
@@ -17,7 +18,16 @@ definePageMeta({
 const roomStore = useRoomStore();
 const buildingStore = useBuildingStore();
 const building_roomStore = useBuilding_RoomStore();
-const { isLoading } = storeToRefs(roomStore, buildingStore, building_roomStore);
+const roomTypeStore = useRoom_Types();
+
+// Combine loading flags if stores expose them (JS-friendly, no TS casts)
+const isLoading = computed(
+  () =>
+    !!(roomStore && roomStore.isLoading) ||
+    !!(buildingStore && buildingStore.isLoading) ||
+    !!(building_roomStore && building_roomStore.isLoading) ||
+    !!(roomTypeStore && roomTypeStore.isLoading)
+);
 
 const Room = ref({
   name: "",
@@ -26,13 +36,19 @@ const Room = ref({
   image_url: "", // ใช้สำหรับ preview รูป
   imageFile: null, // ไฟล์จริง ใช้ส่งไป backend
   building_id: null,
+  room_type_id: null,
+  start_time_str: "", // รับรูปแบบเวลา เช่น "08:00"
+  end_time_str: "", // รับรูปแบบเวลา เช่น "18:00"
 });
 
 const buildings = ref([]);
+const roomTypes = ref([]);
 
 onMounted(async () => {
   await buildingStore.fetchBuildings();
   buildings.value = buildingStore.buildings;
+  await roomTypeStore.fetchRoomTypes();
+  roomTypes.value = roomTypeStore.roomTypes;
 });
 
 const handleImageUpload = (event) => {
@@ -70,6 +86,66 @@ const handleCreate = async () => {
     return;
   }
 
+  if (!Room.value.room_type_id) {
+    await Swal.fire({
+      icon: "warning",
+      title: "กรุณาเลือกประเภทห้อง",
+      confirmButtonText: "ตกลง",
+      customClass: { popup: "my-popup", confirmButton: "btn-ok" },
+    });
+    return;
+  }
+
+  if (!Room.value.start_time_str || !Room.value.end_time_str) {
+    await Swal.fire({
+      icon: "warning",
+      title: "กรุณาเลือกเวลาเปิด-ปิดห้อง",
+      confirmButtonText: "ตกลง",
+      customClass: { popup: "my-popup", confirmButton: "btn-ok" },
+    });
+    return;
+  }
+
+  const toSecondsOfDay = (hhmm) => {
+    if (typeof hhmm !== "string" || !hhmm.includes(":")) return null;
+    const [hStr, mStr] = hhmm.split(":");
+    const h = Number(hStr);
+    const m = Number(mStr);
+    if (
+      Number.isNaN(h) ||
+      Number.isNaN(m) ||
+      h < 0 ||
+      h > 23 ||
+      m < 0 ||
+      m > 59
+    )
+      return null;
+    return h * 3600 + m * 60; // วินาทีตั้งแต่ 00:00
+  };
+
+  const startSec = toSecondsOfDay(Room.value.start_time_str);
+  const endSec = toSecondsOfDay(Room.value.end_time_str);
+
+  if (startSec == null || endSec == null) {
+    await Swal.fire({
+      icon: "warning",
+      title: "รูปแบบเวลาไม่ถูกต้อง",
+      confirmButtonText: "ตกลง",
+      customClass: { popup: "my-popup", confirmButton: "btn-ok" },
+    });
+    return;
+  }
+
+  if (endSec < startSec) {
+    await Swal.fire({
+      icon: "warning",
+      title: "เวลาเปิดต้องน้อยกว่าหรือเท่ากับเวลาปิด",
+      confirmButtonText: "ตกลง",
+      customClass: { popup: "my-popup", confirmButton: "btn-ok" },
+    });
+    return;
+  }
+
   if (!Room.value.imageFile) {
     await Swal.fire({
       icon: "warning",
@@ -88,13 +164,32 @@ const handleCreate = async () => {
     description: Room.value.description,
     capacity: Room.value.capacity,
     image_url: Room.value.imageFile,
+    room_type_id: Room.value.room_type_id,
+    // เก็บเป็นวินาทีตั้งแต่ 00:00 ของวัน (ไม่เก็บวันเดือนปี)
+    start_room: startSec,
+    end_room: endSec,
   });
 
-  if (createdRoom && createdRoom.data && createdRoom.data.ID) {
-    await building_roomStore.addBuilding_Room({
-      roomId: createdRoom.data.ID,
-      buildingId: Room.value.building_id,
+  const createdId =
+    createdRoom?.data?.id ||
+    createdRoom?.data?.ID ||
+    createdRoom?.id ||
+    createdRoom?.ID;
+  if (createdId) {
+    const linkRes = await building_roomStore.addBuilding_Room({
+      room_id: createdId,
+      building_id: Room.value.building_id,
     });
+    if (!linkRes) {
+      await Swal.fire({
+        icon: "warning",
+        title: "ผูกห้องกับอาคารไม่สำเร็จ",
+        text: "สร้างห้องสำเร็จแล้ว แต่การเชื่อม building_room ล้มเหลว",
+        confirmButtonText: "ตกลง",
+        customClass: { popup: "my-popup", confirmButton: "btn-ok" },
+      });
+      // ไม่ return เพื่อยังคงไปหน้ารายการห้องได้
+    }
 
     await Swal.fire({
       icon: "success",
@@ -112,6 +207,10 @@ const handleCreate = async () => {
     await Swal.fire({
       icon: "error",
       title: "สร้างห้องไม่สำเร็จ",
+      text:
+        createdRoom && createdRoom.status?.message
+          ? String(createdRoom.status.message)
+          : "ไม่พบรหัสห้องจากผลลัพธ์ API",
       confirmButtonText: "ตกลง",
       customClass: {
         popup: "my-popup",
@@ -128,6 +227,9 @@ const handleCreate = async () => {
     image_url: "",
     imageFile: null,
     building_id: null,
+    room_type_id: null,
+    start_time_str: "",
+    end_time_str: "",
   };
 };
 </script>
@@ -184,13 +286,34 @@ const handleCreate = async () => {
           <input type="text" v-model="Room.name" placeholder="ชื่อห้อง" />
         </div>
         <div class="form-group">
+          <label>ประเภทห้อง:</label>
+          <select v-model="Room.room_type_id">
+            <option disabled value="">-- เลือกประเภทห้อง --</option>
+            <option v-for="rt in roomTypes" :key="rt.id" :value="rt.id">
+              {{ rt.name || rt.type || rt.id }}
+            </option>
+          </select>
+        </div>
+        <div class="form-group">
           <label>อาคาร:</label>
           <select v-model="Room.building_id">
             <option disabled value="">-- เลือกอาคาร --</option>
-            <option v-for="building in buildings" :key="building.id" :value="building.id">
+            <option
+              v-for="building in buildings"
+              :key="building.id"
+              :value="building.id"
+            >
               {{ building.name }}
             </option>
           </select>
+        </div>
+        <div class="form-group">
+          <label>เวลาเปิดห้อง (เช่น 08:00):</label>
+          <input type="time" v-model="Room.start_time_str" />
+        </div>
+        <div class="form-group">
+          <label>เวลาปิดห้อง (เช่น 18:00):</label>
+          <input type="time" v-model="Room.end_time_str" />
         </div>
         <div class="form-group">
           <label>จำนวนคนที่เข้าประชุมได้:</label>
@@ -198,7 +321,11 @@ const handleCreate = async () => {
         </div>
         <div class="form-group">
           <label>รายละเอียดห้องประชุม:</label>
-          <input type="text" v-model="Room.description" placeholder="คำอธิบาย" />
+          <input
+            type="text"
+            v-model="Room.description"
+            placeholder="คำอธิบาย"
+          />
         </div>
         <button @click="handleCreate" class="create-room">สร้างห้อง</button>
       </div>
@@ -207,7 +334,8 @@ const handleCreate = async () => {
 </template>
 
 <style scoped>
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -232,7 +360,7 @@ body {
 }
 
 .back-button {
-   align-self: flex-start;
+  align-self: flex-start;
   margin-bottom: 20px;
   background-color: transparent;
   border: none;
@@ -248,7 +376,7 @@ body {
 }
 
 .form-wrapper {
-   display: flex;
+  display: flex;
   flex-wrap: wrap;
   gap: 30px;
   padding: 20px;
@@ -386,4 +514,3 @@ select:focus {
   }
 }
 </style>
-

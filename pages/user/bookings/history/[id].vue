@@ -3,7 +3,9 @@ import { useRoute } from "vue-router";
 import LoadingPage from "@/components/Loading.vue";
 import { useBookingStore } from "@/store/bookingStore";
 import { useUserStore } from "@/store/userStore";
-import { ref, onMounted, computed } from "vue";
+import { useReviewStore } from "@/store/reviewStore";
+import { ref, onMounted, computed, nextTick, watch } from "vue";
+import { storeToRefs } from "pinia";
 import dayjs from "dayjs";
 import "dayjs/locale/th";
 import Swal from "sweetalert2";
@@ -14,8 +16,9 @@ definePageMeta({
 });
 
 const formatDateTime = (date) => {
-  const timestamp = date < 10000000000 ? date * 1000 : date;
-  return dayjs(timestamp).locale("th").format("D MMMM YYYY เวลา HH:mm:ss น.");
+  const ts = Number(date);
+  const ms = ts < 10000000000 ? ts * 1000 : ts;
+  return dayjs(ms).locale("th").format("D MMMM YYYY เวลา HH:mm:ss น.");
 };
 
 const route = useRoute();
@@ -23,12 +26,34 @@ const userId = route.params.id || localStorage.getItem("user_id");
 
 const bookingStore = useBookingStore();
 const userStore = useUserStore();
+const reviewStore = useReviewStore();
+
 const bookings = ref([]);
 const user = ref(null);
 
+const reviewModal = ref(false);
+const reviewDetailModal = ref(false);
+const reviewComment = ref("");
+const reviewRating = ref(0);
+const hoverRating = ref(0); // <- ใช้สำหรับไฮไลต์ตอน hover
+const selectedBooking = ref(null);
+const reviewLoading = ref(false);
+const reviewDetail = ref(null);
+// Tracks bookings marked as reviewed immediately after submit (for instant UI flip)
+const reviewedMap = ref({});
+// Cache of last submitted review per booking to show immediately in detail modal
+const lastSubmittedReviews = ref({});
+// Cache of bookings already checked via getByBookingId to avoid duplicate calls
+const checkedByBooking = ref({});
+// Background check indicator
+const checkingReviews = ref(false);
+
 const { isLoading: userLoading } = storeToRefs(userStore);
 const { isLoading: bookingLoading } = storeToRefs(bookingStore);
-const isLoadingPage = computed(() => userLoading.value || bookingLoading.value);
+const { isLoading: reviewsLoading } = storeToRefs(reviewStore);
+const isLoadingPage = computed(
+  () => userLoading.value || bookingLoading.value || reviewsLoading.value
+);
 
 const statusMap = {
   Pending: "กำลังรอ...",
@@ -38,20 +63,98 @@ const statusMap = {
 };
 
 const allStatuses = Object.keys(statusMap);
+// Default: check all statuses in the filter
 const selectedStatuses = ref([...allStatuses]);
 
 onMounted(async () => {
   try {
+    console.log("[History] onMounted: start load for userId=", userId);
     await bookingStore.getBookingByuserId(userId);
     bookings.value = Array.isArray(bookingStore.bookings)
-      ? bookingStore.bookings.sort((a, b) => b.created_at - a.created_at)
+      ? bookingStore.bookings
+          .slice()
+          .sort((a, b) => Number(b.created_at) - Number(a.created_at))
       : [];
+    console.log(
+      "[History] onMounted: bookings loaded =",
+      bookings.value.length
+    );
     await userStore.getUserById(userId);
     user.value = userStore.currentUser;
+    await reviewStore.fetchReviews();
+    // Prefill reviewedMap after refresh so UI shows "ดูรายละเอียดการรีวิว" ทันที
+    populateReviewedMap();
+    // Background backfill: call by booking_id for Finished bookings not present in the list yet
+    await backfillReviewedStatusByBookingId();
   } catch (error) {
     console.error("Error fetching booking details:", error);
   }
 });
+
+// Helpers used by reviewed-map population and watchers must be declared before first use
+const getReviewsList = () =>
+  Array.isArray(reviewStore?.reviews)
+    ? reviewStore.reviews
+    : Array.isArray(reviewStore?.reviews?.value)
+    ? reviewStore.reviews.value
+    : [];
+
+const getBookingIdFromReview = (r) =>
+  r?.booking_id ?? r?.bookingId ?? r?.booking?.id ?? r?.book_id ?? r?.bookingID;
+
+const populateReviewedMap = () => {
+  const list = getReviewsList();
+  const nextMap = {};
+  for (const r of list) {
+    const bId = getBookingIdFromReview(r);
+    if (bId) nextMap[String(bId)] = true;
+  }
+  reviewedMap.value = nextMap;
+};
+
+// Query backend by booking_id for any Finished bookings not detected yet and flip buttons
+const backfillReviewedStatusByBookingId = async () => {
+  if (checkingReviews.value) return;
+  checkingReviews.value = true;
+  try {
+    const candidates = (
+      Array.isArray(bookings.value) ? bookings.value : []
+    ).filter(
+      (b) =>
+        b?.status === "Finished" &&
+        !reviewedMap.value[String(b.id)] &&
+        !checkedByBooking.value[String(b.id)]
+    );
+    for (const b of candidates) {
+      const key = String(b.id);
+      checkedByBooking.value[key] = true;
+      try {
+        const res = await reviewStore.getByBookingIdSilent(key);
+        if (res) {
+          // Mark as reviewed and cache minimal detail
+          reviewedMap.value = { ...reviewedMap.value, [key]: true };
+          // Upsert into store for consistency so findReviewFor can work
+          if (typeof reviewStore.upsertReview === "function") {
+            reviewStore.upsertReview(res);
+          }
+        }
+      } catch (e) {
+        // ignore per-booking errors to continue others
+      }
+    }
+  } finally {
+    checkingReviews.value = false;
+  }
+};
+
+// Keep reviewedMap in sync when reviews list updates
+watch(
+  () => getReviewsList(),
+  () => {
+    populateReviewedMap();
+  },
+  { deep: true }
+);
 
 const filteredBookings = computed(() => {
   if (!Array.isArray(bookings.value)) return [];
@@ -62,18 +165,12 @@ const filteredBookings = computed(() => {
   );
 });
 
-const statusClass = (status) => {
-  return {
-    "btn-pending": status === "Pending",
-    "btn-approved": status === "Approved",
-    "btn-cancel": status === "Canceled",
-    "btn-finished": status === "Finished",
-  };
-};
-
-const openModal = (booking) => {
-  console.log("เปิด modal ของ booking:", booking);
-};
+const statusClass = (status) => ({
+  "btn-pending": status === "Pending",
+  "btn-approved": status === "Approved",
+  "btn-cancel": status === "Canceled",
+  "btn-finished": status === "Finished",
+});
 
 const cancelBooking = async (booking) => {
   const result = await Swal.fire({
@@ -87,23 +184,163 @@ const cancelBooking = async (booking) => {
 
   await bookingStore.updateStatusBooking(booking.id, {
     status: "Canceled",
-    approved_by: "ผู้ใช้ยกเลิกการจอง", // <<--- ตรงนี้
+    approved_by: "ผู้ใช้ยกเลิกการจอง",
   });
   await bookingStore.getBookingByuserId(userId);
-  Swal.fire("ยกเลิกสำเร็จ", "สถานะการจองถูกเปลี่ยนเป็น 'Canceled'", "success")
-  .then(() => {
+  Swal.fire(
+    "ยกเลิกสำเร็จ",
+    "สถานะการจองถูกเปลี่ยนเป็น 'Canceled'",
+    "success"
+  ).then(() => {
     window.location.reload();
   });
 };
+
+// เปิด/ปิดรีวิว
+const openReviewModal = async (booking) => {
+  selectedBooking.value = booking;
+  reviewComment.value = "";
+  reviewRating.value = 0;
+  hoverRating.value = 0;
+  reviewModal.value = true;
+  await nextTick();
+};
+
+const openReviewDetailModal = async (booking) => {
+  reviewLoading.value = true;
+  selectedBooking.value = booking;
+  await reviewStore.fetchReviews();
+  // ค้นหารีวิวที่ตรงกับ booking ก่อน
+  const matched = findReviewFor(booking);
+  if (matched?.id) {
+    try {
+      const fresh = await reviewStore.getById(matched.id);
+      reviewDetail.value = normalizeReview(fresh || matched);
+    } catch (e) {
+      reviewDetail.value = normalizeReview(matched);
+    }
+  } else {
+    // ถ้าไม่มี id ลองเรียกจาก backend ด้วย booking_id โดยตรง
+    try {
+      const byBooking = await reviewStore.getByBookingIdSilent(
+        String(booking.id)
+      );
+      if (byBooking) {
+        reviewDetail.value = normalizeReview(byBooking);
+        // Ensure list flips to "ดูรายละเอียด" right away
+        const key = String(booking.id);
+        reviewedMap.value = { ...reviewedMap.value, [key]: true };
+        if (typeof reviewStore.upsertReview === "function") {
+          reviewStore.upsertReview(byBooking);
+        }
+      } else {
+        // ถ้าไม่เจอในสโตร์ ใช้ค่าในแคช (เพิ่งบันทึก) หรือค่าเริ่มต้น
+        const cached = lastSubmittedReviews.value[String(booking.id)];
+        reviewDetail.value = normalizeReview(
+          matched || cached || { rating: 0, comment: "" }
+        );
+      }
+    } catch (e) {
+      const cached = lastSubmittedReviews.value[String(booking.id)];
+      reviewDetail.value = normalizeReview(
+        matched || cached || { rating: 0, comment: "" }
+      );
+    }
+  }
+  reviewDetailModal.value = true;
+  reviewLoading.value = false;
+};
+
+const closeReviewModal = () => (reviewModal.value = false);
+const closeReviewDetailModal = () => (reviewDetailModal.value = false);
+
+const submitReview = async () => {
+  reviewLoading.value = true;
+  try {
+    const payload = {
+      user_id: user.value?.id,
+      booking_id: selectedBooking.value.id, // ต้องมี booking_id
+      room_id: selectedBooking.value.room_id,
+      rating: reviewRating.value,
+      comment: reviewComment.value,
+    };
+    await reviewStore.addReview(payload);
+    // Optimistic update: ensure the review is present in the store immediately
+    const exists = findReviewFor(selectedBooking.value);
+    if (!exists) {
+      const optimistic = { ...payload };
+      if (Array.isArray(reviewStore?.reviews)) {
+        reviewStore.reviews.push(optimistic);
+      } else if (Array.isArray(reviewStore?.reviews?.value)) {
+        reviewStore.reviews.value.push(optimistic);
+      }
+    }
+    // รีเฟรชข้อมูล bookings และ reviews เพื่อให้ปุ่มเปลี่ยนทันที
+    await bookingStore.getBookingByuserId(userId);
+    bookings.value = Array.isArray(bookingStore.bookings)
+      ? bookingStore.bookings
+          .slice()
+          .sort((a, b) => Number(b.created_at) - Number(a.created_at))
+      : [];
+    await reviewStore.fetchReviews();
+    bookings.value = [...bookings.value];
+    // Mark as reviewed locally for instant UI flip (replace object to ensure reactivity)
+    if (selectedBooking.value?.id) {
+      const key = String(selectedBooking.value.id);
+      reviewedMap.value = { ...reviewedMap.value, [key]: true };
+      // Cache last submitted review for detail modal fallback
+      lastSubmittedReviews.value[key] = {
+        rating: reviewRating.value,
+        comment: reviewComment.value,
+      };
+    }
+    Swal.fire("บันทึกรีวิวสำเร็จ!", "ขอบคุณสำหรับความคิดเห็นของคุณ", "success");
+    reviewModal.value = false;
+    selectedBooking.value = null;
+  } catch (e) {
+    Swal.fire("เกิดข้อผิดพลาด", "ไม่สามารถบันทึกรีวิวได้", "error");
+  }
+  reviewLoading.value = false;
+};
+
+// review helpers
+
+const isSameUser = (r) =>
+  r?.user_id ? String(r.user_id) === String(user.value?.id) : true;
+
+const findReviewFor = (booking) => {
+  const list = getReviewsList();
+  if (!list || list.length === 0) return undefined;
+  return list.find(
+    (r) =>
+      String(getBookingIdFromReview(r)) === String(booking.id) && isSameUser(r)
+  );
+};
+
+const normalizeReview = (r) => {
+  if (!r) return { rating: 0, comment: "" };
+  const rating = r.rating ?? r.score ?? r.stars ?? r.point ?? 0;
+  const comment = r.comment ?? r.review ?? r.text ?? r.message ?? "";
+  return { rating, comment };
+};
+
+const getReviewRating = (booking) => {
+  const r = normalizeReview(findReviewFor(booking));
+  return Math.max(0, Math.min(5, Math.floor(Number(r?.rating ?? 0))));
+};
+const hasReview = (booking) =>
+  Boolean(reviewedMap.value[String(booking.id)]) ||
+  Boolean(lastSubmittedReviews.value[String(booking.id)]) ||
+  Boolean(findReviewFor(booking));
 
 // Pagination
 const currentPage = ref(1);
 const itemsPerPage = 10;
 const jumpToPage = ref(currentPage.value);
 
-const totalPages = computed(() => {
-  return Math.ceil(filteredBookings.value.length / itemsPerPage);
-});
+const totalPages = computed(
+  () => Math.ceil(filteredBookings.value.length / itemsPerPage) || 1
+);
 
 const paginationRange = computed(() => {
   const total = totalPages.value;
@@ -136,9 +373,8 @@ const gotoPage = (page) => {
     page < 1 ||
     page > totalPages.value ||
     page === currentPage.value
-  ) {
+  )
     return;
-  }
   currentPage.value = page;
   jumpToPage.value = page;
 };
@@ -148,13 +384,14 @@ const gotoPage = (page) => {
   <teleport to="body">
     <LoadingPage v-if="isLoadingPage" />
   </teleport>
+
   <div class="page-wrapper">
     <div class="container">
       <h2 class="mb-2">
         <i class="fa-solid fa-clock-rotate-left"></i> ประวัติการจองของคุณ
       </h2>
 
-      <!-- ตัวกรองสถานะ -->
+      <!-- ฟิลเตอร์สถานะ -->
       <div class="status-filter mb-3">
         <label class="filter-title">กรองตามสถานะ:</label>
         <div class="status-option" v-for="status in allStatuses" :key="status">
@@ -171,7 +408,7 @@ const gotoPage = (page) => {
         </div>
       </div>
 
-      <!-- รายการที่กรองแล้ว -->
+      <!-- ตารางรายการ -->
       <div v-if="filteredBookings.length" class="booking-table-wrapper">
         <table class="table table-bordered table-hover">
           <thead class="table-light">
@@ -182,37 +419,75 @@ const gotoPage = (page) => {
               <th>เวลาสิ้นสุด</th>
               <th>สถานะ</th>
               <th>การดำเนินการ</th>
+              <th>ความคิดเห็น</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(booking, index) in paginatedBookings" :key="index">
+            <tr v-for="(booking, index) in paginatedBookings" :key="booking.id">
               <td>{{ formatDateTime(booking.created_at) }}</td>
               <td>{{ booking.room_name }}</td>
               <td>{{ formatDateTime(booking.start_time) }}</td>
               <td>{{ formatDateTime(booking.end_time) }}</td>
+
               <td>
                 <button
                   :class="statusClass(booking.status)"
                   :disabled="['Approved', 'Canceled'].includes(booking.status)"
-                  @click="openModal(booking)"
                 >
                   {{ statusMap[booking.status] }}
                 </button>
               </td>
-              <td> <button
-                v-if="booking.status === 'Pending'"
-                class="btn-cancelbooking"
-                @click="cancelBooking(booking)"
-              >
-                ยกเลิกการจอง
-              </button>
-            </td>
-             
+
+              <td>
+                <button
+                  v-if="booking.status === 'Pending'"
+                  class="btn-cancelbooking"
+                  @click="cancelBooking(booking)"
+                >
+                  ยกเลิกการจอง
+                </button>
+              </td>
+
+              <td>
+                <template v-if="booking.status === 'Finished'">
+                  <!-- ยังไม่มีรีวิว: ปุ่มเขียนรีวิว -->
+                  <button
+                    v-if="!hasReview(booking)"
+                    class="btn-review"
+                    @click="openReviewModal(booking)"
+                    title="ให้คะแนนและเขียนรีวิว"
+                  >
+                    รีวิว
+                  </button>
+
+                  <!-- มีรีวิวแล้ว: แสดงดาว + กดดูรายละเอียด -->
+                  <button
+                    v-else
+                    class="btn-review-detail"
+                    @click="openReviewDetailModal(booking)"
+                    title="ดูรายละเอียดการรีวิว"
+                  >
+                    <span class="stars">
+                      <i
+                        v-for="i in 5"
+                        :key="i"
+                        class="star"
+                        :class="{
+                          filled: i <= getReviewRating(booking),
+                          active: i <= getReviewRating(booking),
+                        }"
+                        >★</i
+                      >
+                    </span>
+                    ดูรายละเอียดการรีวิว
+                  </button>
+                </template>
+              </td>
             </tr>
           </tbody>
         </table>
 
-        <!-- pagination control -->
+        <!-- pagination -->
         <div class="pagination-bar">
           <div class="pagination">
             <button
@@ -256,10 +531,98 @@ const gotoPage = (page) => {
 
       <div v-else class="no-data">ไม่มีรายการจองในขณะนี้</div>
     </div>
+
+    <!-- Review Modal -->
+    <teleport to="body">
+      <div
+        v-if="reviewModal"
+        class="modal-overlay"
+        @click.self="closeReviewModal"
+      >
+        <div class="modal-content">
+          <h3>รีวิวห้อง {{ selectedBooking?.room_name }}</h3>
+
+          <!-- ตัวเลือกดาว (เขียนรีวิว) -->
+          <div class="star-picker" aria-label="ให้คะแนน 1 ถึง 5 ดาว">
+            <button
+              v-for="i in 5"
+              :key="'w-' + i"
+              type="button"
+              class="star"
+              :class="{ active: i <= (hoverRating || reviewRating) }"
+              @mouseenter="hoverRating = i"
+              @mouseleave="hoverRating = 0"
+              @click="reviewRating = i"
+            >
+              ★
+            </button>
+            <span class="star-score">{{ reviewRating }}/5</span>
+          </div>
+
+          <textarea
+            v-model="reviewComment"
+            placeholder="แสดงความคิดเห็น..."
+            rows="4"
+            class="textarea"
+          ></textarea>
+
+          <div class="modal-actions">
+            <!-- ปุ่มบันทึกรีวิวจะ disable ถ้า rating หรือ comment ว่างเปล่า -->
+            <button
+              :disabled="
+                reviewLoading || !reviewRating || !reviewComment.trim()
+              "
+              @click="submitReview"
+              class="btn-review"
+            >
+              บันทึกรีวิว
+            </button>
+            <button @click="closeReviewModal" class="btn-close">ปิด</button>
+          </div>
+        </div>
+      </div>
+    </teleport>
+
+    <!-- Review Detail Modal -->
+    <teleport to="body">
+      <div
+        v-if="reviewDetailModal"
+        class="modal-overlay"
+        @click.self="closeReviewDetailModal"
+      >
+        <div class="modal-content">
+          <h3>รีวิวของคุณ</h3>
+
+          <div class="star-readonly">
+            <i
+              v-for="i in 5"
+              :key="'r-' + i"
+              class="star"
+              :class="{
+                active: i <= Math.floor(Number(reviewDetail?.rating ?? 0)),
+              }"
+              >★</i
+            >
+            <span class="star-score"
+              >{{ Math.floor(Number(reviewDetail?.rating ?? 0)) }}/5</span
+            >
+          </div>
+
+          <div class="review-detail-text">{{ reviewDetail.comment }}</div>
+
+          <div class="modal-actions">
+            <button @click="closeReviewDetailModal" class="btn-close">
+              ปิด
+            </button>
+          </div>
+        </div>
+      </div>
+    </teleport>
   </div>
 </template>
 
 <style scoped>
+/* Layout */
 .page-wrapper {
   min-height: 110vh;
   display: flex;
@@ -275,6 +638,7 @@ const gotoPage = (page) => {
   text-decoration: underline;
 }
 
+/* Filter */
 .status-filter {
   padding: 16px;
   background: #f8f9fa;
@@ -284,7 +648,7 @@ const gotoPage = (page) => {
 }
 
 .filter-title {
-  font-weight: bold;
+  font-weight: 700;
   margin-bottom: 8px;
   display: block;
   color: #333;
@@ -333,14 +697,10 @@ const gotoPage = (page) => {
   font-size: 14px;
   color: #13131f;
   user-select: none;
-  font-weight: bold;
+  font-weight: 700;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
+/* Table */
 .table {
   width: 100%;
   border-collapse: collapse;
@@ -350,44 +710,45 @@ th,
 td {
   padding: 10px;
   text-align: left;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #eee;
 }
 
 th {
-  background-color: #3d3c3c31;
+  background-color: #f4f4f6;
   color: #13131f;
-  font-weight: bold;
+  font-weight: 800;
 }
 
 tr:hover {
-  background-color: #f9f9f9;
-  transition: background-color 0.3s ease;
+  background-color: #fafafa;
+  transition: background-color 0.2s ease;
 }
 
+/* Buttons */
 button {
-  padding: 5px 10px;
+  padding: 6px 12px;
   border: none;
-  border-radius: 5px;
+  border-radius: 6px;
   font-size: 14px;
-  color: rgb(255, 239, 239);
+  color: #fff;
 }
 
 .btn-pending {
   background-color: #f9c749;
+  color: #1a1a1a;
 }
 
 .btn-pending:hover {
-  background-color: #d8ba6f;
-  transition: background-color 0.3s ease;
+  background-color: #e3b83f;
 }
 
 .btn-approved {
   background-color: #73ea8d;
+  color: #0f3a1c;
 }
 
 .btn-approved:hover {
-  background-color: #5bcf6b;
-  transition: background-color 0.3s ease;
+  background-color: #5bd577;
 }
 
 .btn-cancel {
@@ -396,7 +757,6 @@ button {
 
 .btn-cancel:hover {
   background-color: #d9534f;
-  transition: background-color 0.3s ease;
 }
 
 .btn-finished {
@@ -405,48 +765,159 @@ button {
 
 .btn-finished:hover {
   background-color: #5a6268;
-  transition: background-color 0.3s ease;
 }
 
 .btn-cancelbooking {
   background-color: #ef2727;
   cursor: pointer;
 }
+
 .btn-cancelbooking:hover {
   background-color: #d9534f;
-  transition: background-color 0.3s ease;
 }
 
-.booking-table-wrapper {
-  min-height: 400px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  border: 1px solid #ddd;
-  padding: 16px;
-  background-color: #fff;
+.btn-reviewed {
+  background-color: #4caf50;
+  /* เขียว */
+  color: #fff;
   border-radius: 8px;
+  padding: 7px 16px;
+  font-weight: 700;
+  font-size: 14px;
+  margin: 0 4px;
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s ease;
 }
 
-.no-data {
-  text-align: center;
-  padding: 20px;
-  font-style: italic;
-  color: #888;
+.btn-reviewed:hover {
+  background-color: #388e3c;
 }
 
-/* Pagination footer */
-.pagination {
-  display: flex;
-  justify-content: center;
-  /* ทำให้ปุ่มเรียงตรงกลาง */
+.btn-review,
+.btn-review-detail {
+  background-color: #4caf50;
+  /* สีเขียว */
+  color: #fff;
+  border-radius: 8px;
+  padding: 7px 16px;
+  font-weight: 700;
+  font-size: 14px;
+  margin: 0 4px;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.05s ease, background 0.2s ease;
+}
+
+.btn-review-detail:hover {
+  background-color: #388e3c;
+  /* สีเขียวเข้มเมื่อ hover */
+}
+
+.btn-review-detail:active {
+  transform: translateY(1px);
+}
+
+.btn-review-detail {
+  display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
-  /* เผื่อปุ่มเยอะจะได้ไม่ล้น */
-  gap: 5px;
-  padding: 10px 0;
-  background-color: white;
-  border-top: 1px solid #ddd;
+  gap: 6px;
+}
+
+/* Stars (ใช้ได้ทั้งตาราง/เขียน/อ่านอย่างเดียว) */
+.stars {
+  display: inline-flex;
+  gap: 2px;
+  line-height: 1;
+}
+
+.star {
+  color: #ccc;
+  font-size: 16px;
+}
+
+.star.filled,
+.star.active {
+  color: #fbc02d;
+}
+
+/* Star picker (เขียนรีวิว) */
+.star-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 10px;
+}
+
+.star-picker .star {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-size: 24px;
+  line-height: 1;
+  color: #ccc;
+  padding: 0 2px;
+  transition: transform 0.05s ease, color 0.15s ease;
+}
+
+.star-picker .star:hover {
+  transform: translateY(-1px);
+}
+
+.star-picker .star.active {
+  color: #fbc02d;
+}
+
+.star-score {
+  margin-left: 6px;
+  font-weight: 700;
+  color: #444;
+}
+
+/* Readonly stars */
+.star-readonly {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 10px;
+}
+
+.star-readonly .star {
+  font-size: 22px;
+  color: #ccc;
+}
+
+.star-readonly .star.active {
+  color: #fbc02d;
+}
+
+.star-readonly .star-score {
+  font-weight: 700;
+  color: #444;
+}
+
+/* Pagination */
+.pagination-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  z-index: 50;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0), #fff 40%);
+  padding-top: 8px;
+}
+
+.pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #eaeaea;
+  border-radius: 12px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
 }
 
 .pagination button {
@@ -456,8 +927,8 @@ button {
   background-color: #13131f;
   color: white;
   border: none;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
+  border-radius: 8px;
+  transition: background-color 0.15s ease;
 }
 
 .pagination button:hover:not(:disabled) {
@@ -468,22 +939,111 @@ button {
   background-color: #e0e0e0;
   color: #777;
   cursor: not-allowed;
-  opacity: 1;
 }
 
 .pagination button.active {
   background-color: #f5f5f5;
   color: #13131f;
-  font-weight: bold;
+  font-weight: 800;
   border: 1px solid #ccc;
 }
 
-.pagination-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  width: 100%;
+.page-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+  color: #333;
+}
+
+.page-jump input {
+  width: 64px;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+}
+
+/* Card/Table wrapper */
+.booking-table-wrapper {
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: 1px solid #eee;
+  padding: 16px;
+  background-color: #fff;
+  border-radius: 12px;
+}
+
+/* Empty state */
+.no-data {
   text-align: center;
-  z-index: 50;
+  padding: 20px;
+  font-style: italic;
+  color: #888;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2147483647; /* max to ensure on top of any stacking context */
+}
+
+.modal-content {
+  position: relative;
+  z-index: 2147483647;
+  background: #fff;
+  border-radius: 14px;
+  padding: 28px 32px;
+  min-width: 360px;
+  max-width: 440px;
+  box-shadow: 0 8px 32px rgba(33, 150, 243, 0.12);
+}
+
+.textarea {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  outline: none;
+}
+
+.textarea:focus {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.25);
+}
+
+.modal-actions {
+  margin-top: 18px;
+  text-align: right;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.btn-close {
+  background-color: #bdbdbd;
+  color: #222;
+  border-radius: 8px;
+  padding: 7px 18px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.btn-close:hover {
+  background-color: #757575;
+  color: #fff;
+}
+
+.review-detail-text {
+  margin-top: 10px;
+  white-space: pre-wrap;
 }
 </style>

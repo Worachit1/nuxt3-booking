@@ -10,7 +10,10 @@ const equipments = ref([]);
 
 const loadEquipments = async () => {
   await equipmentStore.fetchEquipments();
-  equipments.value = equipmentStore.equipments;
+  equipments.value = equipmentStore.equipments.map((eq) => ({
+    ...eq,
+    available: typeof eq.available === "number" ? eq.available : eq.quantity,
+  }));
 };
 
 onMounted(loadEquipments);
@@ -30,7 +33,7 @@ onMounted(loadEquipments);
         v-for="eq in equipments"
         :key="eq.id"
         class="equipment-card"
-        :class="{ 'broken': eq.status === 'Broken' }"
+        :class="{ broken: eq.status === 'Broken' }"
       >
         <div class="image-wrapper">
           <img v-if="eq.image_url" :src="eq.image_url" alt="equipment" />
@@ -45,6 +48,14 @@ onMounted(loadEquipments);
         <div class="info">
           <h3>{{ eq.name }}</h3>
           <p>จำนวนทั้งหมด: {{ eq.quantity }}</p>
+          <p>
+            <span class="available">จำนวนที่สามารถจองได้:</span>
+            <span
+              :class="['available', eq.available === 0 ? 'zero' : '']"
+            >
+              {{ eq.available }}
+            </span>
+          </p>
         </div>
       </div>
     </div>
@@ -77,6 +88,7 @@ onMounted(loadEquipments);
   cursor: default;
   display: flex;
   flex-direction: column;
+  height: 400px; /* ✅ เพิ่มความสูง card */
 }
 
 .equipment-card:hover {
@@ -89,12 +101,22 @@ onMounted(loadEquipments);
   width: 100%;
   aspect-ratio: 4 / 3; /* สูง/กว้าง = 3/4 */
   overflow: hidden;
+  border-radius: 16px;
+}
+
+.image-wrapper {
+  position: relative;
+  width: 100%;
+  height: 250px; /* ✅ กำหนดความสูงรูปให้ใหญ่ขึ้น */
+  overflow: hidden;
+  border-radius: 16px;
 }
 
 .image-wrapper img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: 100%; /* ✅ ทำให้เต็มพื้นที่ */
+  object-fit: cover; /* ✅ รูปไม่โดนยืดแต่ครอบเต็ม */
+  border-radius: 16px;
 }
 
 .no-image {
@@ -145,5 +167,9 @@ onMounted(loadEquipments);
   padding: 3rem;
   color: #888;
   font-size: 16px;
+}
+
+.available {
+  color: rgb(3, 166, 11);
 }
 </style>

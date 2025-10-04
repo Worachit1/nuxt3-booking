@@ -3,123 +3,127 @@ import { defineStore } from "pinia";
 
 const config = useRuntimeConfig();
 
-export const useBuildingStore = defineStore("building", {
+export const useReport = defineStore("reports", {
   state: () => ({
-    buildings: [],
+    reports: [],
     isLoading: false,
   }),
   actions: {
-    async fetchBuildings() {
+    async fetchReports() {
       this.isLoading = true;
       try {
-        const token =
-          localStorage.getItem("token") || localStorage.getItem("access_token");
-        let auth = token || "";
-        if (auth && (auth.startsWith('"') || auth.startsWith("'"))) {
+        let token =
+          localStorage.getItem("token") ||
+          localStorage.getItem("access_token") ||
+          "";
+        if (token && (token.startsWith('"') || token.startsWith("'"))) {
           try {
-            auth = JSON.parse(auth);
+            token = JSON.parse(token);
           } catch {
-            auth = auth.slice(1, -1);
+            token = token.slice(1, -1);
           }
         }
-        const headers = auth ? { Authorization: `Bearer ${auth}` } : {};
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const response = await axios.get(
-          `${config.public.apiBase}/api/v1/buildings/list`,
-          { headers }
+          `${config.public.apiBase}/api/v1/reports/list`,
+          {
+            headers,
+          }
         );
         if (response.status === 200) {
-          this.buildings = response.data.data;
+          this.reports = response.data.data;
         } else {
-          console.error("Error fetching buildings:", response.statusText);
+          console.error("Error fetching reports:", response.statusText);
         }
       } catch (error) {
-        console.error("Error fetching buildings:", error);
+        console.error("Error fetching reports:", error);
       } finally {
         this.isLoading = false;
       }
     },
 
-    async getById(id: string) {
+    
+async getById(id: string) {
       this.isLoading = true;
       try {
         const response = await axios.get(
-          `${config.public.apiBase}/api/v1/buildings/${id}`
+          `${config.public.apiBase}/api/v1/reports/${id}`
         );
         if (response.status === 200) {
           return response.data.data;
         } else {
-          console.error("Error fetching building:", response.statusText);
+          console.error("Error fetching report:", response.statusText);
         }
       } catch (error) {
-        console.error("Error fetching building:", error);
+        console.error("Error fetching report:", error);
       } finally {
         this.isLoading = false;
       }
     },
 
-    // ✅ ใช้ FormData สำหรับสร้างอาคารใหม่
-    async addBuilding(formData: FormData) {
+    async addReport(payload: any) {
       this.isLoading = true;
       try {
         const token = localStorage.getItem("token");
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         // อย่า set Content-Type ให้ axios ทำเอง
         const response = await axios.post(
-          `${config.public.apiBase}/api/v1/buildings/create`,
-          formData,
+          `${config.public.apiBase}/api/v1/reports/create`,
+          payload,
           { headers }
         );
 
         if (response.status === 200) {
-          await this.fetchBuildings();
+          await this.fetchReports();
         } else {
-          console.error("Error adding building:", response.statusText);
+          console.error("Error adding report:", response.statusText);
         }
       } catch (error) {
-        console.error("Error adding building:", error);
+        console.error("Error adding report:", error);
         throw error;
       } finally {
         this.isLoading = false;
       }
     },
-    // ✅ ใช้ FormData สำหรับอัปเดตอาคาร
-    async updateBuilding(id: string, updatedBuilding: FormData) {
+
+    async updateReport(id: string, updatedReport: FormData) {
       this.isLoading = true;
       try {
         const token = localStorage.getItem("token");
         const headers: any = token ? { Authorization: `Bearer ${token}` } : {};
         // ไม่ต้องกำหนด Content-Type เอง
         await axios.patch(
-          `${config.public.apiBase}/api/v1/buildings/${id}`,
-          updatedBuilding,
+          `${config.public.apiBase}/api/v1/reports/${id}`,
+          updatedReport,
           { headers }
         );
-        await this.fetchBuildings();
+        await this.fetchReports();
       } catch (error) {
-        console.error("Error updating building:", error);
+        console.error("Error updating report:", error);
       } finally {
         this.isLoading = false;
       }
     },
-    async deleteBuilding(id: string) {
+    async deleteReport(id: string) {
       this.isLoading = true;
       try {
         const token = localStorage.getItem("token");
         const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const response = await axios.delete(
-          `${config.public.apiBase}/api/v1/buildings/${id}`,
+          `${config.public.apiBase}/api/v1/reports/${id}`,
           { headers }
         );
         if (response.status === 200) {
-          await this.fetchBuildings();
+          await this.fetchReports();
         } else {
-          console.error("Error deleting building:", response.statusText);
+          console.error("Error deleting report:", response.statusText);
         }
       } catch (error) {
-        console.error("Error deleting building:", error);
+        console.error("Error deleting report:", error);
       } finally {
         this.isLoading = false;
       }
     },
   },
 });
+
