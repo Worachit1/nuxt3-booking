@@ -132,13 +132,13 @@ watch(
 function handleEventClick(info) {
   selectedEvent.value = info.event;
   selectedEventEquipments.value = [];
-  
+
   // Fetch equipment bookings for Approved and Pending bookings only
   const status = info.event.extendedProps?.status;
   if (status === "Approved" || status === "Pending") {
     fetchEquipmentsForBooking(info.event.id);
   }
-  
+
   popupVisible.value = true;
 }
 
@@ -151,12 +151,12 @@ async function fetchEquipmentsForBooking(bookingId) {
   try {
     // Fetch booking equipments
     await equipmentBookingStore.fetchBookingEquipments();
-    
+
     // Filter equipments for this specific booking
     const bookingEquipments = equipmentBookingStore.booking_equipment.filter(
       (be) => String(be.booking_id) === String(bookingId)
     );
-    
+
     // Get equipment details for each booking equipment
     const equipmentDetails = [];
     for (const be of bookingEquipments) {
@@ -166,14 +166,14 @@ async function fetchEquipmentsForBooking(bookingId) {
           equipmentDetails.push({
             ...equipment,
             quantity: be.quantity || 1,
-            booking_equipment_id: be.id
+            booking_equipment_id: be.id,
           });
         }
       } catch (error) {
         console.error("Error fetching equipment details:", error);
       }
     }
-    
+
     selectedEventEquipments.value = equipmentDetails;
   } catch (error) {
     console.error("Error fetching booking equipments:", error);
@@ -279,6 +279,7 @@ const showCreateModal = ref(false);
 const selectedDate = ref(null);
 
 function handleDateClick(info) {
+  // แปลง dateStr ให้เป็นวันที่เสมอ (รองรับทั้ง day view และ week view)
   const selected = dayjs(info.dateStr).startOf("day");
   const today = dayjs().startOf("day");
 
@@ -304,7 +305,8 @@ function handleDateClick(info) {
     return;
   }
 
-  selectedDate.value = info.dateStr;
+  // บันทึกเป็นรูปแบบ YYYY-MM-DD เท่านั้น
+  selectedDate.value = selected.format("YYYY-MM-DD");
   showCreateModal.value = true;
   console.log("roomId:", roomId.value, "selectedDate:", selectedDate.value);
 }
@@ -677,22 +679,30 @@ const calendarOptions = computed(() => ({
                 }}
               </span>
             </p>
-            
+
             <!-- แสดงอุปกรณ์ที่จอง (เฉพาะ Approved และ Pending) -->
-            <div 
-              v-if="selectedEvent?.extendedProps?.status === 'Approved' || selectedEvent?.extendedProps?.status === 'Pending'"
+            <div
+              v-if="
+                selectedEvent?.extendedProps?.status === 'Approved' ||
+                selectedEvent?.extendedProps?.status === 'Pending'
+              "
               class="equipment-section"
             >
               <p><strong>อุปกรณ์ที่จอง:</strong></p>
-              <div v-if="selectedEventEquipments.length > 0" class="equipment-list">
-                <div 
-                  v-for="equipment in selectedEventEquipments" 
+              <div
+                v-if="selectedEventEquipments.length > 0"
+                class="equipment-list"
+              >
+                <div
+                  v-for="equipment in selectedEventEquipments"
                   :key="equipment.id"
                   class="equipment-item"
                 >
                   <div class="equipment-image">
-                    <img 
-                      :src="equipment.image_url || '/images/default-picture.png'" 
+                    <img
+                      :src="
+                        equipment.image_url || '/images/default-picture.png'
+                      "
                       :alt="equipment.name"
                       @error="$event.target.src = '/images/default-picture.png'"
                     />
@@ -700,12 +710,12 @@ const calendarOptions = computed(() => ({
                   <div class="equipment-details">
                     <span class="equipment-name">{{ equipment.name }}</span>
                   </div>
-                  <span class="equipment-quantity">จำนวน: {{ equipment.quantity }}</span>
+                  <span class="equipment-quantity"
+                    >จำนวน: {{ equipment.quantity }}</span
+                  >
                 </div>
               </div>
-              <div v-else class="no-equipment">
-                ไม่มีการจองอุปกรณ์
-              </div>
+              <div v-else class="no-equipment">ไม่มีการจองอุปกรณ์</div>
             </div>
           </div>
           <div class="popup-footer">
@@ -760,6 +770,8 @@ const calendarOptions = computed(() => ({
 .app-container {
   display: flex;
   flex-wrap: wrap;
+  background: #f5f5f5;
+  min-height: 100vh;
 }
 
 .main-content {
@@ -767,37 +779,54 @@ const calendarOptions = computed(() => ({
   flex: 1;
   min-height: 100vh;
   transition: margin-left 0.5s ease;
+  gap: 20px;
+  padding: 20px;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 h2 {
-  text-decoration: underline;
+  font-size: 20px;
+  font-weight: 700;
+  color: #2d2d2d;
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .left-content {
   width: 66.666%;
-  padding: 20px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  border-radius: 5px;
-  margin-top: 20px;
+  padding: 30px;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  border: 2px solid #e0e0e0;
 }
 
 .right-content {
   width: 33.333%;
   max-height: 90vh;
   overflow-y: auto;
-  padding: 20px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 /* ปรับขนาด header */
 .header {
-  font-size: 24px;
-  font-weight: bold;
-  margin-bottom: 16px;
-  margin-left: 15px;
-  text-decoration: underline;
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  margin-left: 0;
+  color: #2d2d2d;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .sub-header {
@@ -811,19 +840,23 @@ h2 {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   flex-wrap: wrap;
+  gap: 16px;
 }
 
 .room-search {
   display: flex;
   align-items: center;
+  gap: 12px;
 }
 
 .calendar-container {
-  background-color: whitesmoke;
-  border-radius: 8px;
+  background-color: #ffffff;
+  border-radius: 12px;
   overflow: hidden;
+  border: 2px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .calendar-footer {
@@ -839,25 +872,46 @@ h2 {
 }
 
 .date-input {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 10px 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
   cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.date-input:focus {
+  outline: none;
+  border-color: #2d2d2d;
+  box-shadow: 0 0 0 3px rgba(45, 45, 45, 0.1);
 }
 
 .search-button {
-  background-color: #13131f;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
   color: white;
-  padding: 10px;
-  border-radius: 4px;
+  padding: 10px 18px;
+  border-radius: 8px;
   cursor: pointer;
-  margin-left: 10px;
-  transition: background-color 0.3s ease;
+  border: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(45, 45, 45, 0.2);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .search-button:hover {
-  background-color: #4a4a4a;
-  transition: background-color 0.3s ease;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(45, 45, 45, 0.3);
+}
+
+.search-button:disabled {
+  background: #e0e0e0;
+  color: #999;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .scroll-select {
@@ -874,7 +928,8 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
   z-index: 500;
   animation: fadeIn 0.2s ease-in-out;
   overflow-y: auto;
@@ -884,76 +939,120 @@ h2 {
 
 .popup-content {
   background: white;
-  padding: 24px;
+  padding: 32px;
   border-radius: 16px;
   width: 100%;
-  max-width: 500px;
+  max-width: 550px;
   max-height: calc(100vh - 80px);
   overflow-y: auto;
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   animation: scaleIn 0.25s ease;
-  font-weight: 600;
   position: relative;
   margin: auto;
+  border: 2px solid #e0e0e0;
 }
 
 .popup-header {
-  font-size: 22px;
-  font-weight: 600;
-  color: #1f2937;
-  margin-bottom: 12px;
+  font-size: 24px;
+  font-weight: 700;
+  color: #2d2d2d;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e0e0e0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .popup-body {
-  font-size: 16px;
-  color: #374151;
+  font-size: 15px;
+  color: #333;
   margin-bottom: 24px;
-  line-height: 1.6;
+  line-height: 1.8;
+}
+
+.popup-body p {
+  margin: 12px 0;
+}
+
+.popup-body strong {
+  color: #2d2d2d;
+  font-weight: 700;
 }
 
 .popup-footer {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  padding-top: 20px;
+  border-top: 2px solid #e0e0e0;
 }
 
 .popup-footer button {
-  background-color: #dbdb02;
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
   color: white;
-  padding: 10px 20px;
+  padding: 12px 24px;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(108, 117, 125, 0.2);
 }
 
 .popup-footer button:hover {
-  background-color: #f0e68c;
-  transition: background-color 0.3s ease;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
 }
 
 .header-row {
-  background-color: #191925;
-  font-weight: bold;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  font-weight: 600;
   color: #ffffff;
 }
 
+.today-bookings table,
+.all-bookings table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.today-bookings th,
+.today-bookings td,
+.all-bookings th,
+.all-bookings td {
+  padding: 12px;
+  text-align: left;
+  border: 1px solid #e0e0e0;
+}
+
+.today-bookings tbody tr,
+.all-bookings tbody tr {
+  transition: all 0.2s;
+}
+
+.today-bookings tbody tr:hover,
+.all-bookings tbody tr:hover {
+  background-color: #f8f9fa !important;
+}
+
 .today-bookings {
-  border-radius: 5px;
-  background-color: #f9f9f9;
-  padding: 10px;
-  margin-bottom: 20px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  font-size: 10px;
+  border-radius: 12px;
+  background-color: #ffffff;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 2px solid #e0e0e0;
+  font-size: 13px;
   width: 100%;
 }
 
 .all-bookings {
-  border-radius: 5px;
-  background-color: #f9f9f9;
-  padding: 10px;
-  margin-bottom: 20px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  font-size: 10px;
+  border-radius: 12px;
+  background-color: #ffffff;
+  padding: 24px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 2px solid #e0e0e0;
+  font-size: 13px;
   width: 100%;
 }
 
@@ -971,45 +1070,51 @@ h2 {
 }
 
 .status-badge {
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px 12px;
+  border-radius: 6px;
   font-size: 12px;
-  font-weight: bold;
+  font-weight: 600;
   text-transform: uppercase;
+  display: inline-block;
 }
 
 .status-approved {
-  background-color: #d4edda;
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
   color: #155724;
+  border: 1px solid #b1dfbb;
 }
 
 .status-pending {
-  background-color: #fff3cd;
+  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
   color: #856404;
+  border: 1px solid #ffd93d;
 }
 
 .status-finished {
-  background-color: #e2e3e5;
+  background: linear-gradient(135deg, #e2e3e5 0%, #d6d8db 100%);
   color: #6c757d;
+  border: 1px solid #ced4da;
 }
 
 .booking-button {
-  background-color: #13131f;
-  border: #000 solid 1px;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  border: none;
   color: white;
-  padding: 10px 20px;
+  padding: 12px 24px;
   text-decoration: none;
-  border-radius: 6px;
-  font-weight: bold;
-  transition: background-color 0.3s ease;
+  border-radius: 8px;
+  font-weight: 600;
+  transition: all 0.3s ease;
   margin-right: 10px;
   margin-top: 5px;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(45, 45, 45, 0.2);
+  display: inline-block;
 }
 
 .booking-button:hover {
-  background-color: #4a4a4a;
-  transition: background-color 0.3s ease;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(45, 45, 45, 0.3);
 }
 
 /* Pagination */
@@ -1018,22 +1123,37 @@ h2 {
   justify-content: center;
   align-items: center;
   gap: 12px;
-  margin: 10px 0 5px;
+  margin: 16px 0 8px;
 }
+
 .page-btn {
-  background-color: #13131f;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
   color: #fff;
   border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
   cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+  box-shadow: 0 2px 6px rgba(45, 45, 45, 0.2);
 }
+
+.page-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(45, 45, 45, 0.3);
+}
+
 .page-btn:disabled {
-  background-color: #adb5bd;
+  background: #e0e0e0;
+  color: #999;
   cursor: not-allowed;
+  box-shadow: none;
 }
+
 .page-info {
   font-weight: 700;
+  color: #2d2d2d;
+  font-size: 14px;
 }
 
 .fc {
