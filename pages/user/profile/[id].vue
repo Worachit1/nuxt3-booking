@@ -157,7 +157,9 @@ onMounted(async () => {
         <button v-if="isEditing" class="btn-back" @click="cancelEdit">
           ยกเลิก
         </button>
-        <button v-else @click="handleBackButton" class="btn-back"><i class="fa-solid fa-arrow-left"></i> กลับ</button>
+        <button v-else @click="handleBackButton" class="btn-back">
+          <i class="fa-solid fa-arrow-left"></i> กลับ
+        </button>
       </div>
     </div>
   </div>
@@ -166,122 +168,189 @@ onMounted(async () => {
 <style scoped>
 .profile-container {
   display: flex;
-  gap: 40px;
-  padding: 30px;
-  background-color: #f9f9f9;
+  gap: 30px;
+  padding: 40px 30px;
+  background-color: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  margin: 50px auto;
-  max-width: 850px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  margin: 0 auto;
+  max-width: 1200px;
 }
 
 .profile-left {
-  width: 250px;
-  padding: 20px;
-  border: 1px solid #ccc;
+  width: 300px;
+  padding: 30px;
+  border: 2px solid #e0e0e0;
   border-radius: 12px;
-  text-align: start;
-  height: 40%;
+  text-align: center;
+  background: #f8f9fa;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
 }
 
 .profile-img {
-  width: 100px;
-  height: 100px;
+  width: 140px;
+  height: 140px;
   object-fit: cover;
   border-radius: 50%;
   margin-bottom: 10px;
+  border: 4px solid #2d2d2d;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.profile-left p {
+  margin: 6px 0;
+  font-size: 15px;
+  color: #333;
+  line-height: 1.6;
+  text-align: center;
 }
 
 .profile-name {
-  font-weight: bold;
-  margin-bottom: 10px;
+  font-weight: 700;
+  font-size: 20px;
+  margin: 12px 0;
+  color: #2d2d2d;
+}
+
+.profile-left input[type="file"] {
+  margin-top: 10px;
+  padding: 8px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 13px;
+  background: #ffffff;
+  width: 100%;
 }
 
 .edit-btn {
   margin-top: 10px;
-  background-color: #2196f3;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
   color: #fff;
   border: none;
-  padding: 8px 20px;
-  border-radius: 8px;
+  padding: 12px 24px;
+  border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 1rem;
-  transition: background 0.2s;
+  font-size: 15px;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(45, 45, 45, 0.2);
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
+
 .edit-btn:hover {
-  background-color: #1769aa;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(45, 45, 45, 0.3);
 }
 
 .btn-black {
-  background-color: #222f3e;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
   color: #fff;
   border: none;
-  padding: 10px 28px;
-  border-radius: 8px;
+  padding: 12px 28px;
+  border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 1rem;
-  transition: background 0.2s;
+  font-size: 15px;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(45, 45, 45, 0.2);
 }
+
 .btn-black:hover {
-  background-color: #3a3a4a;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(45, 45, 45, 0.3);
 }
 
 .btn-back {
-  background-color: #f44336;
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
   color: #fff;
   border: none;
-  padding: 10px 28px;
-  border-radius: 8px;
+  padding: 12px 28px;
+  border-radius: 10px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 15px;
   margin-right: 0;
   margin-top: 0;
-  transition: background 0.2s;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+
 .btn-back:hover {
-  background-color: #c62828;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
 }
 
 .profile-right {
   flex: 1;
+  background: #ffffff;
+  padding: 30px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 h2 {
-  margin-bottom: 20px;
+  margin: 0 0 24px 0;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e0e0e0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #2d2d2d;
 }
 
 .form-grid {
   display: grid;
-  gap: 20px 0px;
+  gap: 24px 0px;
+  margin-bottom: 24px;
 }
 
 .form-grid label {
   display: block;
-  margin-bottom: 6px;
-  font-weight: bold;
+  margin-bottom: 10px;
+  font-weight: 700;
+  font-size: 16px;
+  color: #2d2d2d;
 }
 
 .input-box {
-  width: 40%;
-  padding: 10px 14px;
-  border: 1px solid #ccc;
-  border-radius: 12px;
+  width: 60%;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
   background-color: #fff;
-  font-size: 14px;
+  font-size: 15px;
   outline: none;
+  transition: all 0.3s;
 }
 
 .input-box:focus {
-  border-color: #00aaff;
+  border-color: #2d2d2d;
+  box-shadow: 0 0 0 3px rgba(45, 45, 45, 0.1);
+}
+
+.input-box[readonly] {
+  background: #f3f3f3 !important;
+  cursor: not-allowed !important;
+  color: #666;
 }
 
 .button-row {
   display: flex;
   justify-content: flex-end;
-  gap: 15px;
+  gap: 12px;
   margin-top: 30px;
+  padding-top: 24px;
+  border-top: 2px solid #e0e0e0;
 }
 </style>

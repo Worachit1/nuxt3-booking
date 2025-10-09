@@ -525,25 +525,14 @@ const closeEquipmentModal = () => {
                     รีวิว
                   </button>
 
-                  <!-- มีรีวิวแล้ว: แสดงดาว + กดดูรายละเอียด -->
+                  <!-- มีรีวิวแล้ว: กดดูรายละเอียด (ไม่แสดงดาวในปุ่ม) -->
                   <button
                     v-else
                     class="btn-review-detail"
                     @click="openReviewDetailModal(booking)"
                     title="ดูรายละเอียดการรีวิว"
                   >
-                    <span class="stars">
-                      <i
-                        v-for="i in 5"
-                        :key="i"
-                        class="star"
-                        :class="{
-                          filled: i <= getReviewRating(booking),
-                          active: i <= getReviewRating(booking),
-                        }"
-                        >★</i
-                      >
-                    </span>
+                    <i class="fa-solid fa-star"></i>
                     ดูรายละเอียดการรีวิว
                   </button>
                 </template>
@@ -756,77 +745,94 @@ const closeEquipmentModal = () => {
   min-height: 110vh;
   display: flex;
   flex-direction: column;
+  background: #f5f5f5;
 }
 
 .container {
   flex-grow: 1;
-  margin: 10px;
+  margin: 0 auto;
+  max-width: 1400px;
+  padding: 40px 30px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.container > h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #2d2d2d;
+  margin: 0 0 24px 0;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e0e0e0;
 }
 
 .mb-2 {
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 /* Filter */
 .status-filter {
-  padding: 16px;
+  padding: 20px;
   background: #f8f9fa;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
   display: inline-block;
+  margin-bottom: 24px;
 }
 
 .filter-title {
   font-weight: 700;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   display: block;
-  color: #333;
+  color: #2d2d2d;
   font-size: 16px;
 }
 
 .status-option {
   display: inline-flex;
   align-items: center;
-  margin-right: 16px;
+  margin-right: 20px;
   margin-bottom: 8px;
 }
 
 .custom-checkbox {
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border: 2px solid #ccc;
-  border-radius: 4px;
+  border-radius: 5px;
   margin-right: 8px;
   position: relative;
   cursor: pointer;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
 .custom-checkbox:checked {
-  background-color: #13131f;
-  border-color: #13131f;
+  background-color: #2d2d2d;
+  border-color: #2d2d2d;
 }
 
 .custom-checkbox:checked::after {
   content: "✔";
   color: white;
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: bold;
   position: absolute;
-  top: -2%;
+  top: -2px;
   left: 3px;
 }
 
 .custom-checkbox:hover {
-  border-color: #999;
+  border-color: #2d2d2d;
 }
 
 .custom-label {
   cursor: pointer;
-  font-size: 14px;
-  color: #13131f;
+  font-size: 15px;
+  color: #333;
   user-select: none;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 /* Table */
@@ -837,89 +843,107 @@ const closeEquipmentModal = () => {
 
 th,
 td {
-  padding: 10px;
+  padding: 14px 16px;
   text-align: left;
-  border-bottom: 1px solid #eee;
+  border: 1px solid #e0e0e0;
 }
 
 th {
-  background-color: #f4f4f6;
-  color: #13131f;
-  font-weight: 800;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 15px;
+  white-space: nowrap;
 }
 
-tr:hover {
-  background-color: #fafafa;
-  transition: background-color 0.2s ease;
+tbody tr {
+  background: #ffffff;
+  transition: all 0.2s;
+}
+
+tbody tr:hover {
+  background: #f8f9fa;
 }
 
 /* Buttons */
 button {
-  padding: 6px 12px;
+  padding: 10px 16px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 14px;
+  font-weight: 600;
   color: #fff;
+  transition: all 0.3s;
+  cursor: pointer;
 }
 
 .btn-pending {
-  background-color: #f9c749;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
   color: #1a1a1a;
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
 }
 
 .btn-pending:hover {
-  background-color: #e3b83f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
 }
 
 .btn-approved {
-  background-color: #73ea8d;
-  color: #0f3a1c;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
 .btn-approved:hover {
-  background-color: #5bd577;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
 .btn-cancel {
-  background-color: #f06666;
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
 }
 
 .btn-cancel:hover {
-  background-color: #d9534f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
 }
 
 .btn-finished {
-  background-color: #6c757d;
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
 }
 
 .btn-finished:hover {
-  background-color: #5a6268;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
 }
 
 .btn-cancelbooking {
-  background-color: #ef2727;
-  cursor: pointer;
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
 }
 
 .btn-cancelbooking:hover {
-  background-color: #d9534f;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
 }
 
 .btn-equipment {
-  background-color: #17a2b8;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
   color: white;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 6px 10px;
-  display: flex;
+  font-size: 14px;
+  padding: 10px 16px;
+  display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(45, 45, 45, 0.2);
 }
 
 .btn-equipment:hover {
-  background-color: #138496;
-  transition: background-color 0.3s ease;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(45, 45, 45, 0.3);
 }
 
 .no-equipment-text {
@@ -929,52 +953,38 @@ button {
   display: block;
 }
 
-.btn-reviewed {
-  background-color: #4caf50;
-  /* เขียว */
-  color: #fff;
-  border-radius: 8px;
-  padding: 7px 16px;
-  font-weight: 700;
-  font-size: 14px;
-  margin: 0 4px;
-  cursor: pointer;
-  border: none;
-  transition: background 0.2s ease;
-}
-
-.btn-reviewed:hover {
-  background-color: #388e3c;
-}
-
 .btn-review,
 .btn-review-detail {
-  background-color: #4caf50;
-  /* สีเขียว */
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: #fff;
   border-radius: 8px;
-  padding: 7px 16px;
-  font-weight: 700;
+  padding: 10px 18px;
+  font-weight: 600;
   font-size: 14px;
-  margin: 0 4px;
   cursor: pointer;
   border: none;
-  transition: transform 0.05s ease, background 0.2s ease;
-}
-
-.btn-review-detail:hover {
-  background-color: #388e3c;
-  /* สีเขียวเข้มเมื่อ hover */
-}
-
-.btn-review-detail:active {
-  transform: translateY(1px);
-}
-
-.btn-review-detail {
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+  transition: all 0.3s ease;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+}
+
+.btn-review:hover,
+.btn-review-detail:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.btn-review:disabled {
+  background: #e0e0e0;
+  color: #999;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-review:disabled:hover {
+  transform: none;
 }
 
 /* Stars (ใช้ได้ทั้งตาราง/เขียน/อ่านอย่างเดียว) */
@@ -1058,63 +1068,80 @@ button {
   width: 100%;
   text-align: center;
   z-index: 50;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0), #fff 40%);
-  padding-top: 8px;
+  background: linear-gradient(180deg, rgba(245, 245, 245, 0), #f5f5f5 40%);
+  padding: 12px 0;
 }
 
 .pagination {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
+  gap: 8px;
+  padding: 12px 16px;
   background: #fff;
-  border: 1px solid #eaeaea;
+  border: 2px solid #e0e0e0;
   border-radius: 12px;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .pagination button {
-  padding: 6px 12px;
+  padding: 8px 14px;
   font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  background-color: #13131f;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
   color: white;
   border: none;
   border-radius: 8px;
-  transition: background-color 0.15s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 6px rgba(45, 45, 45, 0.2);
 }
 
 .pagination button:hover:not(:disabled) {
-  background-color: #444760;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(45, 45, 45, 0.3);
 }
 
 .pagination button:disabled {
-  background-color: #e0e0e0;
-  color: #777;
+  background: #e0e0e0;
+  color: #999;
   cursor: not-allowed;
+  box-shadow: none;
+}
+
+.pagination button:disabled:hover {
+  transform: none;
 }
 
 .pagination button.active {
-  background-color: #f5f5f5;
-  color: #13131f;
-  font-weight: 800;
-  border: 1px solid #ccc;
+  background: #ffffff;
+  color: #2d2d2d;
+  font-weight: 700;
+  border: 2px solid #2d2d2d;
+  box-shadow: 0 2px 8px rgba(45, 45, 45, 0.15);
 }
 
 .page-jump {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-left: 6px;
-  color: #333;
+  gap: 8px;
+  margin-left: 10px;
+  color: #2d2d2d;
+  font-weight: 600;
 }
 
 .page-jump input {
-  width: 64px;
-  padding: 6px 8px;
-  border: 1px solid #ddd;
+  width: 70px;
+  padding: 8px 10px;
+  border: 2px solid #e0e0e0;
   border-radius: 8px;
   outline: none;
+  font-size: 14px;
+  text-align: center;
+  transition: border-color 0.3s;
+}
+
+.page-jump input:focus {
+  border-color: #2d2d2d;
 }
 
 /* Card/Table wrapper */
@@ -1123,76 +1150,90 @@ button {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  border: 1px solid #eee;
-  padding: 16px;
+  border: 2px solid #e0e0e0;
+  padding: 20px;
   background-color: #fff;
   border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 /* Empty state */
 .no-data {
   text-align: center;
-  padding: 20px;
+  padding: 60px 20px;
   font-style: italic;
-  color: #888;
+  color: #999;
+  font-size: 16px;
 }
 
 /* Modal */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2147483647; /* max to ensure on top of any stacking context */
+  z-index: 2147483647;
 }
 
 .modal-content {
   position: relative;
   z-index: 2147483647;
   background: #fff;
-  border-radius: 14px;
-  padding: 28px 32px;
-  min-width: 360px;
-  max-width: 440px;
-  box-shadow: 0 8px 32px rgba(33, 150, 243, 0.12);
+  border-radius: 16px;
+  padding: 32px 36px;
+  min-width: 400px;
+  max-width: 500px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h3 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #2d2d2d;
+  margin: 0 0 20px 0;
 }
 
 .textarea {
   width: 100%;
-  margin-top: 10px;
-  padding: 10px 12px;
-  border: 1px solid #e5e7eb;
+  margin-top: 12px;
+  padding: 12px 14px;
+  border: 2px solid #e0e0e0;
   border-radius: 10px;
   outline: none;
+  font-size: 15px;
+  line-height: 1.5;
+  transition: border-color 0.3s;
 }
 
 .textarea:focus {
-  border-color: #93c5fd;
-  box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.25);
+  border-color: #2d2d2d;
+  box-shadow: 0 0 0 3px rgba(45, 45, 45, 0.1);
 }
 
 .modal-actions {
-  margin-top: 18px;
+  margin-top: 24px;
   text-align: right;
   display: flex;
-  gap: 8px;
+  gap: 10px;
   justify-content: flex-end;
 }
 
 .btn-close {
-  background-color: #bdbdbd;
-  color: #222;
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  color: #fff;
   border-radius: 8px;
-  padding: 7px 18px;
-  font-weight: 700;
+  padding: 10px 20px;
+  font-weight: 600;
   font-size: 14px;
+  box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
 }
 
 .btn-close:hover {
-  background-color: #757575;
-  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
 }
 
 .review-detail-text {
@@ -1211,49 +1252,61 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #ddd;
-  padding-bottom: 10px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 16px;
 }
 
 .modal-header h3 {
   margin: 0;
-  color: #13131f;
+  color: #2d2d2d;
+  font-size: 22px;
+  font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .close-btn {
-  background: none;
-  border: none;
-  font-size: 18px;
+  background: #f8f9fa;
+  border: 2px solid #e0e0e0;
+  font-size: 20px;
   cursor: pointer;
   color: #666;
-  padding: 5px;
-  border-radius: 3px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  transition: all 0.3s;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .close-btn:hover {
-  background-color: #f0f0f0;
-  color: #13131f;
+  background-color: #2d2d2d;
+  color: #fff;
+  border-color: #2d2d2d;
+  transform: rotate(90deg);
 }
 
 .modal-body {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .booking-info {
   background-color: #f8f9fa;
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  border-left: 4px solid #17a2b8;
+  padding: 18px;
+  border-radius: 10px;
+  margin-bottom: 24px;
+  border-left: 4px solid #2d2d2d;
 }
 
 .booking-info p {
-  margin: 5px 0;
-  color: #495057;
+  margin: 8px 0;
+  color: #333;
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 .equipment-list {
@@ -1265,21 +1318,27 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
-  margin: 8px 0;
+  padding: 14px;
+  margin: 10px 0;
   background-color: #f8f9fa;
-  border-radius: 8px;
-  border-left: 3px solid #17a2b8;
-  gap: 12px;
+  border-radius: 10px;
+  border-left: 4px solid #2d2d2d;
+  gap: 14px;
+  transition: all 0.2s;
+}
+
+.equipment-item:hover {
+  background-color: #e9ecef;
+  transform: translateX(4px);
 }
 
 .equipment-image {
   flex-shrink: 0;
-  width: 50px;
-  height: 50px;
-  border-radius: 6px;
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
   overflow: hidden;
-  border: 1px solid #e5e7eb;
+  border: 2px solid #e0e0e0;
 }
 
 .equipment-image img {
@@ -1292,49 +1351,51 @@ button {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .equipment-name {
-  font-weight: 600;
-  color: #374151;
-  font-size: 14px;
+  font-weight: 700;
+  color: #2d2d2d;
+  font-size: 15px;
 }
 
 .equipment-description {
-  font-size: 12px;
-  color: #6b7280;
+  font-size: 13px;
+  color: #666;
   font-style: italic;
 }
 
 .equipment-quantity {
   font-size: 14px;
-  color: #6b7280;
-  background-color: #e5e7eb;
-  padding: 2px 8px;
-  border-radius: 12px;
+  font-weight: 600;
+  color: #2d2d2d;
+  background-color: #e9ecef;
+  padding: 4px 12px;
+  border-radius: 14px;
   white-space: nowrap;
 }
 
 .no-equipment {
   text-align: center;
-  padding: 40px 20px;
-  color: #6b7280;
+  padding: 60px 20px;
+  color: #999;
   font-style: italic;
+  font-size: 16px;
 }
 
 .no-equipment i {
-  font-size: 48px;
-  margin-bottom: 10px;
+  font-size: 60px;
+  margin-bottom: 16px;
   display: block;
-  color: #cbd5e0;
+  color: #ddd;
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  border-top: 1px solid #ddd;
-  padding-top: 15px;
+  gap: 12px;
+  border-top: 2px solid #e0e0e0;
+  padding-top: 20px;
 }
 </style>

@@ -245,108 +245,209 @@ const submitReport = async () => {
 
 <style scoped>
 .reports-container {
-  max-width: 1000px;
-  margin: 24px auto;
-  background: #fff;
+  max-width: 1400px;
+  margin: 0 auto;
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 40px 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.title {
+  margin: 0 0 24px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e0e0e0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #2d2d2d;
+}
+
+.report-form {
+  border: 2px solid #e0e0e0;
   border-radius: 12px;
   padding: 24px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  background: #f8f9fa;
+  margin-bottom: 32px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
-.title {
-  margin: 0 0 16px;
-  font-size: 22px;
-  color: #13131f;
-}
-.report-form {
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 16px;
-  background: #fafafa;
-  margin-bottom: 24px;
-}
+
 .form-row {
   display: flex;
-  gap: 16px;
+  gap: 20px;
+  margin-bottom: 20px;
 }
+
 .form-group {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
+
 .form-group label {
-  font-weight: 600;
-  margin-bottom: 6px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: #2d2d2d;
+  font-size: 16px;
 }
+
 select,
 input,
 textarea {
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 15px;
+  transition: all 0.3s;
+  background: #ffffff;
 }
+
+select:focus,
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: #2d2d2d;
+  box-shadow: 0 0 0 3px rgba(45, 45, 45, 0.1);
+}
+
+select:disabled {
+  background: #e9ecef;
+  cursor: not-allowed;
+  color: #999;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 100px;
+  font-family: inherit;
+  line-height: 1.6;
+}
+
 .hint {
-  color: #6b7280;
+  color: #666;
+  font-size: 13px;
+  margin-top: 6px;
+  font-style: italic;
 }
+
 .submit {
-  margin-top: 12px;
-  background: #13131f;
+  margin-top: 16px;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
   color: #fff;
   border: none;
-  border-radius: 8px;
-  padding: 10px 16px;
+  border-radius: 10px;
+  padding: 14px 24px;
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(45, 45, 45, 0.2);
 }
+
+.submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(45, 45, 45, 0.3);
+}
+
 .submit:disabled {
-  background: #9aa0a6;
+  background: #e0e0e0;
+  color: #999;
   cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
 
 .rooms-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
 }
+
 .hint-select {
-  margin-top: 8px;
-  color: #6b7280;
+  margin-top: 20px;
+  padding: 40px;
+  text-align: center;
+  color: #999;
+  font-size: 16px;
+  font-style: italic;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 2px dashed #e0e0e0;
 }
+
 .room-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
   background: #fff;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
+
+.room-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  border-color: #2d2d2d;
+}
+
 .room-card.active {
-  outline: 2px solid #2d6cdf;
+  border: 3px solid #2d2d2d;
+  box-shadow: 0 4px 16px rgba(45, 45, 45, 0.2);
+  transform: translateY(-2px);
 }
+
 .room-card img {
   width: 100%;
-  height: 140px;
+  height: 180px;
   object-fit: cover;
+  border-bottom: 2px solid #e0e0e0;
 }
+
 .room-info {
-  padding: 10px;
+  padding: 16px;
+  flex: 1;
 }
+
 .room-name {
   font-weight: 700;
-  color: #111827;
-  margin-bottom: 4px;
+  font-size: 17px;
+  color: #2d2d2d;
+  margin-bottom: 8px;
 }
+
 .room-desc {
-  color: #6b7280;
-  font-size: 13px;
-  min-height: 36px;
+  color: #666;
+  font-size: 14px;
+  line-height: 1.5;
+  min-height: 42px;
 }
+
 .pick {
-  margin: 10px;
-  background: #2d6cdf;
+  margin: 0 12px 12px 12px;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
   color: #fff;
   border: none;
   border-radius: 8px;
-  padding: 8px 12px;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(45, 45, 45, 0.2);
+}
+
+.pick:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(45, 45, 45, 0.3);
+}
+
+.room-card.active .pick {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.room-card.active .pick:hover {
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 </style>

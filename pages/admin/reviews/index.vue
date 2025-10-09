@@ -155,102 +155,164 @@ const formatDate = (d) => (d ? dayjs(d).format("DD/MM/YYYY HH:mm") : "-");
 
 <style scoped>
 .admin-reviews {
-  max-width: 1100px;
-  margin: 24px auto;
-  background: #fff;
+  max-width: 1400px;
+  margin: 0 auto;
+  background: #ffffff;
   border-radius: 12px;
-  padding: 20px 24px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+  padding: 40px 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
+
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 20px;
+  padding-bottom: 24px;
+  border-bottom: 2px solid #e0e0e0;
+  margin-bottom: 24px;
 }
+
 .header h2 {
   margin: 0;
-  font-size: 22px;
-  color: #13131f;
+  font-size: 28px;
+  font-weight: 700;
+  color: #2d2d2d;
 }
+
 .search input {
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 15px;
+  transition: all 0.3s;
+  min-width: 280px;
+}
+
+.search input:focus {
+  outline: none;
+  border-color: #2d2d2d;
+  box-shadow: 0 2px 8px rgba(45, 45, 45, 0.1);
 }
 .empty {
-  padding: 16px;
-  color: #6b7280;
+  padding: 40px;
+  text-align: center;
+  color: #999;
+  font-size: 16px;
 }
+
 .rooms {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px;
-  margin-top: 16px;
+  gap: 20px;
+  margin-top: 0;
 }
+
 .room-card {
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
   overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s;
 }
+
+.room-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
 .room-header {
-  padding: 12px 14px;
-  background: #f8fafc;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  border-bottom: none;
 }
+
 .room-title .name {
-  font-weight: 800;
-  color: #111827;
+  font-weight: 700;
+  font-size: 18px;
+  color: #ffffff;
+  margin-bottom: 8px;
 }
+
 .room-title .meta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: #374151;
+  gap: 12px;
+  color: #e0e0e0;
+  font-size: 14px;
 }
 .stars {
   display: inline-flex;
-  gap: 2px;
+  gap: 3px;
 }
+
 .star {
   color: #d1d5db;
+  font-size: 16px;
 }
+
 .star.active {
-  color: #f59e0b;
+  color: #fbbf24;
 }
+
 .avg {
   font-weight: 700;
+  color: #ffffff;
 }
+
 .count {
-  color: #6b7280;
+  color: #b0b0b0;
 }
+
 .reviews {
-  padding: 12px 14px;
+  padding: 20px;
   display: grid;
-  gap: 10px;
+  gap: 14px;
+  background: #f8f9fa;
 }
+
 .review-item {
-  border: 1px solid #f1f5f9;
-  border-radius: 8px;
-  padding: 10px;
-  background: #fff;
+  border: 2px solid #e0e0e0;
+  border-left: 4px solid #2d2d2d;
+  border-radius: 10px;
+  padding: 16px;
+  background: #ffffff;
+  transition: all 0.3s;
 }
+
+.review-item:hover {
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  transform: translateX(4px);
+}
+
 .rating {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
+
+.rating .star {
+  font-size: 18px;
+}
+
 .score {
   font-weight: 700;
+  color: #2d2d2d;
+  font-size: 15px;
 }
+
 .comment {
-  margin-top: 6px;
+  margin-top: 10px;
   white-space: pre-wrap;
+  line-height: 1.6;
+  color: #333;
+  font-size: 15px;
 }
+
 .created {
-  margin-top: 6px;
-  color: #6b7280;
-  font-size: 12px;
+  margin-top: 10px;
+  color: #999;
+  font-size: 13px;
 }
 </style>

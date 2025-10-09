@@ -113,52 +113,86 @@ const formatCreatedAt = (rep) => {
 
 <style scoped>
 .admin-reports {
-  max-width: 1100px;
-  margin: 24px auto;
-  background: #fff;
+  max-width: 1400px;
+  margin: 0 auto;
+  background: #ffffff;
   border-radius: 12px;
-  padding: 20px 24px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
+  padding: 40px 30px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
+
 .title {
-  font-size: 22px;
-  margin: 0 0 16px;
-  color: #13131f;
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 24px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e0e0e0;
+  color: #2d2d2d;
 }
+
 .no-data {
-  padding: 16px;
-  color: #6b7280;
+  padding: 40px;
+  color: #999;
   text-align: center;
+  font-size: 16px;
 }
 .table-wrapper {
   overflow-x: auto;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
+
 .reports-table {
   width: 100%;
   border-collapse: collapse;
 }
+
 .reports-table th,
 .reports-table td {
-  border: 1px solid #e5e7eb;
-  padding: 10px;
+  border: 1px solid #e0e0e0;
+  padding: 14px 16px;
   text-align: left;
 }
+
 .reports-table thead th {
-  background: #f3f4f6;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 15px;
+  white-space: nowrap;
 }
+
+.reports-table tbody tr {
+  background: #ffffff;
+  transition: all 0.2s;
+}
+
+.reports-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
 .desc {
   max-width: 480px;
   white-space: pre-wrap;
+  line-height: 1.6;
+  color: #333;
 }
+
 .edit-btn {
-  background: #2d6cdf;
-  color: #fff;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  color: #ffffff;
   border: none;
-  padding: 8px 12px;
+  padding: 10px 18px;
   border-radius: 8px;
   cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(45, 45, 45, 0.2);
 }
+
 .edit-btn:hover {
-  background: #1f54b8;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(45, 45, 45, 0.3);
 }
 </style>
