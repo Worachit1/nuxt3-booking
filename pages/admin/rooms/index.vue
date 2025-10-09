@@ -207,7 +207,7 @@ onMounted(async () => {
     <!-- แสดงรายการอาคาร -->
     <div v-if="!selectedBuilding">
       <div class="header-row">
-        <h1><i class="fa-solid fa-building"></i> รายการอาคารทั้งหมด</h1>
+        <h1><i class="fa-solid fa-building"></i> รายการห้องภายในอาคาร</h1>
         <button
           class="btn-create"
           @click="router.push('/admin/rooms/createRoom')"
@@ -369,15 +369,16 @@ onMounted(async () => {
 
 <style scoped>
 .container {
-  padding: 15px;
-  margin: 20px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  padding: 40px 30px;
+  margin: 30px auto;
+  max-width: 1400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   padding-bottom: 80px;
-  height: calc(100vh - 110px);
-  max-height: calc(100vh - 110px);
   min-height: 400px;
   overflow-y: auto;
-  background: #fff;
+  background: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -387,7 +388,9 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e0e0e0;
 }
 
 .breadcrumb {
@@ -397,87 +400,103 @@ onMounted(async () => {
 }
 
 .back-button {
-  background: linear-gradient(135deg, #13131f 0%, #2d2d3a 100%);
-  color: white;
-  padding: 10px 15px;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  color: #f5f5f5;
+  padding: 10px 20px;
   border: none;
-  border-radius: 25px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: transform 0.2s;
+  transition: all 0.3s;
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: bold;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .back-button:hover {
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
 }
 
 .header-row h1 {
   margin: 0;
-  font-size: 24px;
+  font-size: 28px;
+  color: #2d2d2d;
+  font-weight: 700;
 }
 
 /* Building Grid Styles */
 .buildings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 25px;
   margin-bottom: 30px;
 }
 
 .building-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   cursor: pointer;
-  transition: transform 0.3s, box-shadow 0.3s;
-  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  border: 1px solid #e0e0e0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .building-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-  border-color: #13131f;
+  transform: translateY(-8px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
 }
 
 .building-image {
-  margin-bottom: 15px;
+  width: 100%;
+  height: 220px;
+  overflow: hidden;
 }
 
 .building-image img {
   width: 100%;
-  height: 200px;
+  height: 100%;
   object-fit: cover;
-  border-radius: 8px;
+  display: block;
+}
+
+.building-info {
+  padding: 20px;
 }
 
 .building-info h3 {
-  margin: 0 0 10px 0;
-  color: #13131f;
-  font-size: 1.3rem;
+  margin: 0 0 12px 0;
+  color: #2d2d2d;
+  font-size: 1.4rem;
+  font-weight: 700;
 }
 
 .building-info p {
-  margin: 0 0 15px 0;
-  color: #6c757d;
-  line-height: 1.5;
+  margin: 0 0 16px 0;
+  color: #555;
+  line-height: 1.6;
+  font-size: 0.95rem;
 }
 
 .building-stats {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
 }
 
 .room-count {
-  color: #28a745;
-  font-weight: bold;
+  color: #2d2d2d;
+  font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
+  font-size: 1rem;
 }
 
 /* Room Table Styles */
@@ -492,29 +511,30 @@ onMounted(async () => {
   border-spacing: 0;
   border-radius: 8px;
   overflow: hidden;
-  background-color: #fafafa;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  background-color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 th,
 td {
-  padding: 16px;
+  padding: 14px 12px;
   vertical-align: middle;
-  border-bottom: 1px solid #eaeaea;
-  font-weight: bold;
+  border-bottom: 1px solid #e0e0e0;
+  font-weight: 500;
 }
 
 th {
-  background-color: #3d3c3c31;
-  color: #13131f;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  color: #f5f5f5;
+  font-weight: 600;
 }
 
 tr:hover {
-  background-color: #f2f2f2;
+  background-color: #f8f9fa;
 }
 
 .alt-row {
-  background-color: #d0d3d880 !important;
+  background-color: #f8f9fa !important;
 }
 
 img {
@@ -574,55 +594,62 @@ button {
 }
 
 h1 {
-  text-decoration: underline;
+  text-decoration: none;
 }
 
 .btn-create {
-  background-color: #13131f;
-  color: white;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  color: #f5f5f5;
   border: none;
-  padding: 10px 20px;
+  padding: 12px 24px;
   cursor: pointer;
-  border-radius: 5px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   font-size: 16px;
-  font-weight: bold;
-  gap: 5px;
-  transition: background-color 0.3s;
-  border: 1px solid #13131f;
+  font-weight: 600;
+  gap: 8px;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .btn-create:hover {
-  background-color: #4a4a4a;
-  transition: background-color 0.3s ease;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
 }
 
 .btn-detail {
-  background-color: #5bc0de;
-  color: white;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  color: #f5f5f5;
   border: none;
-  padding: 7px 15px;
+  padding: 8px 16px;
   margin-top: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .btn-detail:hover {
-  background-color: #31b0d5;
-  transition: background-color 0.3s ease;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
 }
 
 .btn-cancel {
-  background-color: #f06666;
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
   color: white;
   border: none;
-  padding: 7px 15px;
+  padding: 8px 16px;
   margin-left: 10px;
   margin-top: 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
 }
 
 .btn-cancel:hover {
-  background-color: #d9534f;
-  transition: background-color 0.3s ease;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+  background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
 }
 
 .pagination-bar {
@@ -648,32 +675,34 @@ h1 {
 }
 
 .pagination button {
-  padding: 6px 12px;
+  padding: 8px 14px;
   font-size: 14px;
   cursor: pointer;
-  background-color: #13131f;
-  color: white;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  color: #f5f5f5;
   border: none;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  font-weight: 500;
 }
 
 .pagination button:hover:not(:disabled) {
-  background-color: #444760;
+  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
+  transform: translateY(-1px);
 }
 
 .pagination button:disabled {
   background-color: #e0e0e0;
-  color: #777;
+  color: #999;
   cursor: not-allowed;
-  opacity: 1;
+  opacity: 0.6;
 }
 
 .pagination button.active {
-  background-color: #f5f5f5;
-  color: #13131f;
-  font-weight: bold;
-  border: 1px solid #ccc;
+  background: #f5f5f5;
+  color: #2d2d2d;
+  font-weight: 600;
+  border: 2px solid #2d2d2d;
 }
 
 .page-jump {

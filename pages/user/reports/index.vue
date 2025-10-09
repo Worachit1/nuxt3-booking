@@ -1,5 +1,6 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
+import { storeToRefs } from "pinia";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 import LoadingPage from "@/components/Loading.vue";
@@ -7,21 +8,36 @@ import LoadingPage from "@/components/Loading.vue";
 import { useRoomStore } from "@/store/roomStore";
 import { useReport } from "@/store/reportStore";
 import { useUserStore } from "@/store/userStore";
+import { useBuildingStore } from "@/store/buildingStore";
+import { useBuilding_RoomStore } from "@/store/building_roomStore";
 
 definePageMeta({ middleware: ["load-user"] });
 
 const roomStore = useRoomStore();
 const reportStore = useReport();
 const userStore = useUserStore();
+const buildingStore = useBuildingStore();
+const buildingRoomStore = useBuilding_RoomStore();
 
+const selectedBuildingId = ref("");
 const selectedRoomId = ref("");
 const description = ref("");
 
 const { isLoading: roomsLoading } = storeToRefs(roomStore);
 const { isLoading: reportsLoading } = storeToRefs(reportStore);
-const isLoading = computed(() => roomsLoading.value || reportsLoading.value);
+const { isLoading: buildingsLoading } = storeToRefs(buildingStore);
+const { isLoading: buildingRoomsLoading } = storeToRefs(buildingRoomStore);
+const isLoading = computed(
+  () =>
+    roomsLoading.value ||
+    reportsLoading.value ||
+    buildingsLoading.value ||
+    buildingRoomsLoading.value
+);
 
 const userId = ref(null);
+const buildings = ref([]);
+const roomsInBuilding = ref([]);
 
 onMounted(async () => {
   // load user id (for report payload)
@@ -32,11 +48,72 @@ onMounted(async () => {
       await userStore.getUserById(uid);
     } catch {}
   }
-  // fetch rooms for selection
-  await roomStore.fetchAllRooms();
+  // fetch buildings for first-step selection
+  await buildingStore.fetchBuildings();
+  buildings.value = Array.isArray(buildingStore.buildings)
+    ? buildingStore.buildings
+    : [];
 });
 
-// ไม่ต้องมีการค้นหา: แสดงทุกห้องจาก roomStore.rooms
+// โหลดห้องตามอาคารที่เลือก
+const loadRoomsForBuilding = async () => {
+  roomsInBuilding.value = [];
+  selectedRoomId.value = "";
+  const bId = selectedBuildingId.value;
+  if (!bId) return;
+  try {
+    const res = await buildingRoomStore.getRoomsByBuildingId(String(bId));
+    let list = [];
+    // รองรับหลายรูปแบบข้อมูลจาก backend
+    if (Array.isArray(res)) {
+      list = res;
+    } else if (res && Array.isArray(res.rooms)) {
+      list = res.rooms;
+    }
+    // เปิดไส้ room จากรูปแบบ {room:{...}} หรือ normalize id/name
+    const norm = [];
+    for (const item of list) {
+      const r = item?.room || item?.Room || item;
+      let id = r?.id ?? r?.ID ?? r?.room_id ?? r?.roomId;
+      let name = r?.name ?? r?.Name;
+      let image_url = r?.image_url ?? r?.imageUrl ?? r?.image;
+      let description = r?.description ?? r?.desc;
+      if (!id && (item?.room_id || item?.roomId)) {
+        id = item.room_id || item.roomId;
+      }
+      if (!name || !image_url) {
+        // ดึงรายละเอียดห้องถ้าข้อมูลไม่ครบ
+        if (id) {
+          const full = await roomStore.getById(String(id));
+          if (full) {
+            name = name || full.name;
+            image_url = image_url || full.image_url;
+            description = description || full.description;
+          }
+        }
+      }
+      if (id) norm.push({ id, name, image_url, description });
+    }
+    // กันซ้ำตาม id
+    const seen = new Set();
+    roomsInBuilding.value = norm.filter((r) => {
+      const key = String(r.id);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  } catch (e) {
+    // ถ้า endpoint ใช้ไม่ได้ ให้ fallback จาก buildings store (ถ้ามีโครงสร้าง)
+    const b = buildings.value.find(
+      (x) => String(x.id) === String(selectedBuildingId.value)
+    );
+    roomsInBuilding.value = Array.isArray(b?.rooms) ? b.rooms : [];
+  }
+};
+
+watch(selectedBuildingId, () => {
+  loadRoomsForBuilding();
+});
 
 const pickRoom = (id) => {
   selectedRoomId.value = String(id);
@@ -44,7 +121,10 @@ const pickRoom = (id) => {
 
 const canSubmit = computed(() => {
   return Boolean(
-    selectedRoomId.value && description.value.trim().length >= 5 && userId.value
+    selectedBuildingId.value &&
+      selectedRoomId.value &&
+      description.value.trim().length >= 5 &&
+      userId.value
   );
 });
 
@@ -97,15 +177,24 @@ const submitReport = async () => {
     <div class="report-form">
       <div class="form-row">
         <div class="form-group">
+          <label>เลือกอาคาร</label>
+          <select v-model="selectedBuildingId">
+            <option value="" disabled>-- เลือกอาคาร --</option>
+            <option v-for="b in buildings" :key="b.id" :value="String(b.id)">
+              {{ b.name || b.building_name || b.id }}
+            </option>
+          </select>
+        </div>
+        <div class="form-group">
           <label>เลือกห้อง</label>
-          <select v-model="selectedRoomId">
+          <select v-model="selectedRoomId" :disabled="!selectedBuildingId">
             <option value="" disabled>-- เลือกห้อง --</option>
             <option
-              v-for="r in roomStore.rooms"
+              v-for="r in roomsInBuilding"
               :key="r.id"
               :value="String(r.id)"
             >
-              {{ r.name }}
+              {{ r.name || r.id }}
             </option>
           </select>
         </div>
@@ -127,9 +216,12 @@ const submitReport = async () => {
     </div>
 
     <!-- Rooms Grid -->
-    <div class="rooms-grid">
+    <div v-if="!selectedBuildingId" class="hint-select">
+      กรุณาเลือกอาคารก่อน
+    </div>
+    <div v-else class="rooms-grid">
       <div
-        v-for="room in roomStore.rooms"
+        v-for="room in roomsInBuilding"
         :key="room.id"
         class="room-card"
         :class="{ active: String(room.id) === String(selectedRoomId) }"
@@ -139,10 +231,13 @@ const submitReport = async () => {
           :alt="room.name"
         />
         <div class="room-info">
-          <div class="room-name">{{ room.name }}</div>
+          <div class="room-name">{{ room.name || room.id }}</div>
           <div class="room-desc">{{ room.description }}</div>
         </div>
         <button class="pick" @click="pickRoom(room.id)">เลือกห้องนี้</button>
+      </div>
+      <div v-if="roomsInBuilding.length === 0" class="hint-select">
+        ไม่มีห้องในอาคารนี้
       </div>
     </div>
   </div>
@@ -211,6 +306,10 @@ textarea {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 16px;
+}
+.hint-select {
+  margin-top: 8px;
+  color: #6b7280;
 }
 .room-card {
   border: 1px solid #e5e7eb;

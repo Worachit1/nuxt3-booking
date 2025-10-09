@@ -334,77 +334,77 @@ const handleCreate = async () => {
 </template>
 
 <style scoped>
-html,
-body {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start; /* ให้ปุ่ม back อยู่ด้านบน */
-  background-color: #f4f4f4;
-  font-family: sans-serif;
-}
-
 .container {
   display: flex;
   flex-direction: column;
-  align-items: center;
   width: 100%;
   max-width: 1200px;
-  padding: 30px 20px;
+  margin: 30px auto;
+  padding: 40px 30px;
   box-sizing: border-box;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e0e0e0;
 }
 
 .back-button {
   align-self: flex-start;
-  margin-bottom: 20px;
-  background-color: transparent;
+  margin-bottom: 30px;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
   border: none;
-  color: #1f2937;
+  color: #f5f5f5;
   font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  transition: all 0.3s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
+
 .back-button:hover {
-  text-decoration: underline;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
 }
 
 .form-wrapper {
   display: flex;
   flex-wrap: wrap;
-  gap: 30px;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-  background-color: #fff;
-  width: 80%;
-  justify-content: center;
-  align-items: center;
+  gap: 40px;
+  padding: 0;
+  width: 100%;
+  justify-content: flex-start;
+  align-items: flex-start;
 }
 
 .image-section {
-  flex: 1;
+  flex: 0 0 400px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  background: #f8f9fa;
+  padding: 30px;
+  border-radius: 12px;
+  border: 2px dashed #e0e0e0;
 }
 
 .image-preview {
   width: 100%;
   max-width: 350px;
+  height: 350px;
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   object-fit: cover;
+  border: 1px solid #e0e0e0;
 }
 
 .input-image {
-  margin-top: 15px;
+  margin-top: 20px;
 }
 
 .file-hidden {
@@ -412,68 +412,93 @@ body {
 }
 
 .upload-button {
-  background-color: #3b82f6;
-  color: #fff;
-  padding: 10px 14px;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  color: #f5f5f5;
+  padding: 12px 20px;
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 14px;
+  gap: 8px;
+  font-size: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
+
 .upload-button:hover {
-  background-color: #2563eb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
 }
 
 .form-section {
   flex: 1;
-  min-width: 300px;
+  min-width: 400px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .form-group label {
   font-weight: 600;
-  margin-bottom: 6px;
-  color: #374151;
+  margin-bottom: 8px;
+  color: #2d2d2d;
+  font-size: 15px;
 }
 
 input,
 select {
-  padding: 10px 14px;
-  border: 1px solid #d1d5db;
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
   border-radius: 8px;
-  font-size: 14px;
-  width: 80%;
+  font-size: 15px;
+  width: 100%;
   box-sizing: border-box;
-  transition: border-color 0.2s ease;
+  transition: all 0.2s ease;
+  background: #ffffff;
 }
+
 input:focus,
 select:focus {
-  border-color: #3b82f6;
+  border-color: #2d2d2d;
   outline: none;
+  box-shadow: 0 0 0 3px rgba(45, 45, 45, 0.1);
+}
+
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .create-room {
-  background-color: #10b981;
-  color: white;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  color: #f5f5f5;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
-  transition: background-color 0.3s ease;
-  padding: 12px 24px;
-  font-size: 15px;
+  transition: all 0.3s ease;
+  padding: 14px 32px;
+  font-size: 16px;
+  margin-top: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  width: 100%;
 }
+
 .create-room:hover {
-  background-color: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
 }
 
 .my-popup {
@@ -498,19 +523,41 @@ select:focus {
 }
 
 /* Responsive */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
   .form-wrapper {
     flex-direction: column;
-    width: 90%;
-    padding: 20px;
+    gap: 30px;
+  }
+
+  .image-section {
+    flex: 1;
+    width: 100%;
   }
 
   .form-section {
     width: 100%;
+    min-width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 30px 20px;
+    margin: 20px;
   }
 
   .image-section {
-    width: 100%;
+    padding: 20px;
+  }
+
+  .image-preview {
+    max-width: 100%;
+    height: 250px;
+  }
+
+  input,
+  select {
+    font-size: 14px;
   }
 }
 </style>

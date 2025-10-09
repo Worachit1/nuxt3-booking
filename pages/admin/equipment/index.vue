@@ -17,7 +17,6 @@ const showModal = ref(false);
 const newEquipment = ref({
   name: "",
   quantity: "",
-  status: "Available",
   image: null,
   imagePreview: null,
 });
@@ -82,7 +81,6 @@ const createEquipment = async () => {
   const formData = new FormData();
   formData.append("name", newEquipment.value.name.trim());
   formData.append("quantity", newEquipment.value.quantity);
-  formData.append("status", "Available");
 
   if (newEquipment.value.image) {
     formData.append("image_url", newEquipment.value.image);
@@ -93,7 +91,6 @@ const createEquipment = async () => {
     newEquipment.value = {
       name: "",
       quantity: "",
-      status: "Available",
       image: null,
       imagePreview: null,
     };
@@ -117,7 +114,6 @@ const saveEdit = async (index) => {
   const formData = new FormData();
   formData.append("name", e.name.trim());
   formData.append("quantity", e.quantity);
-  formData.append("status", e.status);
 
   formData.append("existing_image_url", e.image_url);
   if (e.imageFile) {
@@ -161,7 +157,6 @@ const closeModals = () => {
   newEquipment.value = {
     name: "",
     quantity: "",
-    status: "Available",
     image: null,
     imagePreview: null,
   };
@@ -188,7 +183,6 @@ const closeModals = () => {
           <th>ชื่ออุปกรณ์</th>
           <th>จำนวนทั้งหมด</th>
           <th>จำนวนที่สามารถจองได้</th>
-          <th>สถานะ</th>
           <th>การดำเนินการ</th>
         </tr>
       </thead>
@@ -233,37 +227,7 @@ const closeModals = () => {
           </td>
 
           <td>
-            <span v-if="!eq.isEditing">{{ eq.available }}</span>
-            <input
-              v-else
-              v-model="eq.available"
-              type="number"
-              min="0"
-              placeholder="จำนวนที่สามารถจองได้"
-            />
-          </td>
-
-          <!-- สถานะ -->
-          <td>
-            <span
-              v-if="!eq.isEditing"
-              :class="{
-                'equipment-available': eq.status === 'Available',
-                'equipment-broken': eq.status === 'Broken',
-              }"
-            >
-              {{
-                eq.status === "Available"
-                  ? "พร้อมใช้งาน"
-                  : eq.status === "Broken"
-                  ? "ชำรุด"
-                  : eq.status
-              }}
-            </span>
-            <select v-else v-model="eq.status">
-              <option value="Available">พร้อมใช้งาน</option>
-              <option value="Broken">ชำรุด</option>
-            </select>
+            <span>{{ eq.available }}</span>
           </td>
 
           <!-- ปุ่มการดำเนินการ -->
@@ -336,14 +300,15 @@ const closeModals = () => {
 
 <style scoped>
 .container {
-  padding: 3vw 4vw;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  margin: 5vw auto;
+  padding: 40px 30px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  margin: 30px auto;
   max-width: 1200px;
   width: 100%;
   box-sizing: border-box;
+  border: 1px solid #e0e0e0;
 }
 
 .header {
@@ -352,7 +317,9 @@ const closeModals = () => {
   gap: 12px;
   justify-content: center;
   align-items: flex-start;
-  margin-bottom: 20px;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e0e0e0;
 }
 
 @media (min-width: 640px) {
@@ -366,54 +333,83 @@ const closeModals = () => {
 h1 {
   margin: 0;
   font-size: 6vw;
-  color: #333;
-  text-decoration: underline;
+  color: #2d2d2d;
+  font-weight: 700;
 }
 
 @media (min-width: 640px) {
   h1 {
-    font-size: 28px;
+    font-size: 32px;
   }
 }
 
 .createequipment {
-  background-color: #13131f;
-  color: white;
-  border: 1px solid #13131f;
-  padding: 10px 20px;
-  border-radius: 5px;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  color: #f0f0f0;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   font-size: 16px;
-  font-weight: bold;
+  font-weight: 600;
   gap: 8px;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .createequipment:hover {
-  background-color: #4a4a4a;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
 }
 
 .equipment-table {
   width: 100%;
   border-collapse: collapse;
   word-break: break-word;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  overflow: hidden;
 }
 
-.equipment-table th,
-.equipment-table td {
-  padding: 12px 8px;
+.equipment-table th {
+  padding: 14px 12px;
   text-align: left;
   vertical-align: middle;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  color: #f5f5f5;
+  font-weight: 600;
 }
 
-.equipment-table input[type="text"] {
+.equipment-table td {
+  padding: 14px 12px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.equipment-table tr:hover {
+  background: #f8f9fa;
+}
+
+.equipment-table input[type="text"],
+.equipment-table input[type="number"] {
   width: 80%;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  padding: 10px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
   font-size: 16px;
+  transition: all 0.2s;
+}
+
+.equipment-table input[type="text"]:focus,
+.equipment-table input[type="number"]:focus {
+  outline: none;
+  border-color: #2d2d2d;
+  box-shadow: 0 0 0 3px rgba(45, 45, 45, 0.1);
 }
 
 .action-buttons {
@@ -425,41 +421,51 @@ h1 {
 .edit,
 .confirm,
 .delete {
-  padding: 8px 12px;
+  padding: 8px 16px;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 500;
   display: flex;
   align-items: center;
   gap: 6px;
+  transition: all 0.2s;
 }
 
 .edit {
-  background-color: #00b7ff;
-  color: white;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  color: #f5f5f5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .edit:hover {
-  background-color: #0088cc;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
 }
 
 .confirm {
-  background-color: #ffb700;
-  color: white;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  color: #f5f5f5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .confirm:hover {
-  background-color: #cc9a00;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
 }
 
 .delete {
-  background-color: #f13c3c;
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
   color: white;
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
 }
 
 .delete:hover {
-  background-color: #cc0000;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+  background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
 }
 
 .modal-overlay {
@@ -468,12 +474,12 @@ h1 {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 500;
-  backdrop-filter: blur(3px);
+  z-index: 1000;
+  backdrop-filter: blur(5px);
 }
 
 .modal {
@@ -481,35 +487,37 @@ h1 {
   padding: 30px 40px;
   border-radius: 12px;
   width: 90vw;
-  max-width: 400px;
-  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
+  max-width: 500px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  border: 1px solid #e0e0e0;
   animation: scaleFadeIn 0.3s ease forwards;
   transform-origin: center;
   box-sizing: border-box;
 }
 
 .modal h3 {
-  margin-bottom: 20px;
-  font-size: 22px;
-  font-weight: bold;
+  margin-bottom: 24px;
+  font-size: 24px;
+  font-weight: 700;
   text-align: center;
-  color: #333;
+  color: #2d2d2d;
 }
 
 .modal input {
   width: 100%;
-  padding: 10px 14px;
-  border: 1px solid #ccc;
-  border-radius: 6px;
+  padding: 12px 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
   font-size: 16px;
   margin-bottom: 20px;
   outline: none;
-  transition: border-color 0.2s;
+  transition: all 0.2s;
+  box-sizing: border-box;
 }
 
 .modal input:focus {
-  border-color: #00b7ff;
-  box-shadow: 0 0 3px rgba(0, 183, 255, 0.4);
+  border-color: #2d2d2d;
+  box-shadow: 0 0 0 3px rgba(45, 45, 45, 0.1);
 }
 
 .modal-actions {
@@ -521,30 +529,36 @@ h1 {
 .modal-confirm,
 .modal-cancel {
   padding: 10px 20px;
-  border-radius: 6px;
-  font-weight: bold;
+  border-radius: 8px;
+  font-weight: 500;
   font-size: 16px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: all 0.2s ease;
   border: none;
 }
 
 .modal-confirm {
-  background-color: #00c853;
-  color: white;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  color: #f5f5f5;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .modal-confirm:hover {
-  background-color: #009c3b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
 }
 
 .modal-cancel {
-  background-color: #4e555b;
+  background-color: #6c757d;
   color: white;
+  box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
 }
 
 .modal-cancel:hover {
-  background-color: #7d878f;
+  background-color: #5a6268;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
 }
 
 @keyframes scaleFadeIn {
@@ -559,14 +573,5 @@ h1 {
   }
 }
 
-/* ✅ status class สำหรับ equipment */
-.equipment-available {
-  color: green;
-  font-weight: bold;
-}
-
-.equipment-broken {
-  color: red;
-  font-weight: bold;
-}
+/* (สถานะถูกซ่อนและไม่แก้ไขอีกต่อไป) */
 </style>

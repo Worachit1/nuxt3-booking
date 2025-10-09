@@ -155,7 +155,7 @@ function hideTooltip() {
           <!-- รายการห้องในอาคาร -->
           <ul v-if="openBuildingId === b.id" class="dropdown-sub">
             <li
-              v-for="room in b.rooms_name || b.rooms || []"
+              v-for="room in (b.rooms_name || b.rooms || [])"
               :key="getRoomId(room) ?? getRoomName(room)"
               class="dropdown-sub-item"
             >
@@ -174,7 +174,7 @@ function hideTooltip() {
                 <span
                   v-else
                   class="room-link"
-                  style="cursor: not-allowed; opacity: 0.6"
+                  style="cursor: not-allowed; opacity: .6;"
                   @mouseenter="showTooltip(getRoomName(room), $event)"
                   @mouseleave="hideTooltip"
                   @mousemove="showTooltip(getRoomName(room), $event)"
@@ -198,10 +198,7 @@ function hideTooltip() {
               </div>
 
               <!-- ชั้นสอง: รายการภายใต้ห้องนั้น -->
-              <ul
-                v-if="openRoomName === getRoomName(room)"
-                class="dropdown-sub-sub"
-              >
+              <ul v-if="openRoomName === getRoomName(room)" class="dropdown-sub-sub">
                 <li>
                   <router-link
                     :to="`/user/bookings/bookingroom/${getRoomId(room)}`"
@@ -227,6 +224,7 @@ function hideTooltip() {
           </ul>
         </li>
       </ul>
+
 
       <!-- เฉพาะ Admin เท่านั้น -->
       <div v-if="isAdmin">
@@ -268,7 +266,7 @@ function hideTooltip() {
           <i class="fas fa-receipt"></i> รายการรีวิวห้อง
         </router-link>
 
-        <router-link
+         <router-link
           to="/admin/reports"
           class="home-link"
           exact-active-class="active-link"
@@ -278,7 +276,7 @@ function hideTooltip() {
       </div>
 
       <!-- ประวัติการจอง (ทุกคนเห็นได้) -->
-      <router-link
+       <router-link
         :to="`/user/equipment`"
         class="home-link"
         exact-active-class="active-link"
@@ -294,7 +292,7 @@ function hideTooltip() {
         <i class="fas fa-history"></i> ประวัติการจอง
       </router-link>
 
-      <router-link
+       <router-link
         :to="`/bookingStatistics`"
         class="home-link"
         exact-active-class="active-link"
@@ -302,12 +300,12 @@ function hideTooltip() {
         <i class="fa-solid fa-chart-simple"></i> สถิติการจอง
       </router-link>
 
-      <router-link
+       <router-link
         :to="`/user/reports`"
         class="home-link"
         exact-active-class="active-link"
       >
-        <i class="fa-solid fa-circle-info"></i> แจ้งการรายงานห้อง
+       <i class="fa-solid fa-circle-info"></i> แจ้งการรายงานห้อง
       </router-link>
     </div>
     <!-- Custom Tooltip Modal -->
@@ -324,26 +322,23 @@ function hideTooltip() {
 <style scoped>
 .sidebar {
   width: 200px;
-  background: linear-gradient(180deg, #1a1a1a 0%, #0d0d0d 100%);
-  height: 100vh;
+  background-color: #13131f;
+  height: 150vh;
   position: fixed;
   left: 0;
-  top: 0;
+  top: 10px;
   transform: translateX(-100%);
-  transition: transform 0.3s ease;
+  transition: transform 0.85s ease;
   z-index: 1000;
-  box-shadow: 2px 0 12px rgba(0, 0, 0, 0.7);
-  border-right: 1px solid #404040;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
 }
 
 .sidebar.open {
   transform: translateX(0);
 }
-
 .sidebar-content {
   padding: 20px;
-  padding-top: 55px;
-  max-height: 100vh;
+  max-height: calc(100vh - 40px); /* ปรับตาม header/sidebar */
   overflow-y: auto;
 }
 
@@ -351,54 +346,55 @@ function hideTooltip() {
   position: absolute;
   top: 20px;
   left: 210px;
-  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+  background-color: #13131f;
   border: none;
   padding: 10px;
   cursor: pointer;
-  border-radius: 10px;
+  border-radius: 50px;
   z-index: 1100;
   margin-top: 20%;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
 }
 
 .toggle-btn:hover {
   transform: scale(1.05);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.9);
+  transition: transform 0.3s ease;
+}
+
+.sidebar-content {
+  padding: 20px;
 }
 
 .home-link-header {
   display: block;
   margin-top: 25px;
   text-decoration: none;
-  color: #b0b0b0;
-  font-weight: 600;
+  color: #ffffff;
+  font-weight: bold;
 }
 
 .home-link-header:hover {
-  color: #ffffff;
+  transform: scale(1.05);
+  transition: transform 0.3s ease;
 }
 
 .home-link {
   display: block;
   margin-top: 20px;
   text-decoration: none;
-  color: #b0b0b0;
-  font-weight: 500;
+  color: #ffffff;
+  font-weight: bold;
   padding: 8px 12px;
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  border-radius: 6px;
+  transition: background-color 0.3s ease;
 }
 
 .home-link:hover {
-  background-color: rgba(80, 80, 80, 0.5);
-  transform: translateX(5px);
-  color: #ffffff;
+  background-color: #444466;
 }
 
 .active-link {
-  background-color: rgba(80, 80, 80, 0.7) !important;
-  color: #ffffff !important;
-  font-weight: 600;
+  background-color: whitesmoke !important;
+  color: #13131f !important;
 }
 
 .dropdown-list {
@@ -411,21 +407,22 @@ function hideTooltip() {
 
 .dropdown-item {
   margin: 5px 0;
-  color: #b0b0b0;
+  color: #ffffff;
   font-size: 16px;
   cursor: pointer;
   transition: 0.2s;
   text-decoration: none;
+  animation: scaleIn 0.25s ease;
 }
 
 .dropdown-sub-item:hover,
 .room-link:hover,
+.home-link:hover,
 .building-name:hover {
   text-decoration: none;
-  background: rgba(80, 80, 80, 0.5);
+  background: #e4e1e151;
   border-radius: 5px;
-  transition: all 0.2s ease;
-  color: #ffffff;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .dropdown-sub-item:active,
@@ -433,8 +430,8 @@ function hideTooltip() {
 .home-link:active,
 .building-name:active {
   color: #ffffff;
-  background-color: rgba(80, 80, 80, 0.7);
-  transition: background-color 0.2s ease;
+  background-color: #4a4a72;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 .building-name,
 .room-link {
@@ -451,20 +448,22 @@ function hideTooltip() {
   list-style: none;
   padding-left: 15px;
   margin-top: 5px;
+  animation: fadeIn 0.2s ease-in-out;
 }
 
 .dropdown-sub-item {
   font-size: 16px;
-  color: #909090;
+  color: #ddd;
   margin-top: 4px;
   cursor: pointer;
   transition: 0.2s;
   text-decoration: none;
+  animation: scaleIn 0.25s ease;
 }
 
 .room-link {
   text-decoration: none;
-  color: #909090;
+  color: inherit;
   font-size: 14px;
   margin-right: 20px;
 }
@@ -473,16 +472,14 @@ function hideTooltip() {
 .custom-tooltip {
   position: fixed;
   z-index: 9999;
-  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
-  color: #e0e0e0;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 13px;
+  background: #2d3748;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
   pointer-events: none;
   white-space: nowrap;
-  max-width: 400px;
-  overflow-x: auto;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
-  border: 1px solid #404040;
+  max-width: 300px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 </style>

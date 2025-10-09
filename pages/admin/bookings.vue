@@ -6,6 +6,8 @@ import "sweetalert2/dist/sweetalert2.min.css";
 import LoadingPage from "@/components/Loading.vue";
 
 import { useBookingStore } from "@/store/bookingStore";
+import { useEquipmentBookingStore } from "@/store/equipmentBookingStore";
+import { useEquipmentStore } from "@/store/equipmentStore";
 import { storeToRefs } from "pinia";
 import dayjs from "dayjs";
 import "dayjs/locale/th";
@@ -17,6 +19,8 @@ import { useUserId } from "~/composables/useUser";
 const userId = useUserId();
 
 const bookingStore = useBookingStore();
+const equipmentBookingStore = useEquipmentBookingStore();
+const equipmentStore = useEquipmentStore();
 const bookings = computed(() => bookingStore.bookings);
 const { isLoading } = storeToRefs(bookingStore, useUserId);
 
@@ -100,6 +104,11 @@ const filteredBookings = computed(() =>
 const showModal = ref(false);
 const selectedBooking = ref(null);
 
+// Equipment modal
+const showEquipmentModal = ref(false);
+const selectedBookingEquipments = ref([]);
+const currentBookingForEquipment = ref(null);
+
 const handleUpdateStatus = async (bookingId, status) => {
   try {
     const booking = bookings.value.find((b) => b.id === bookingId);
@@ -182,13 +191,58 @@ const openModal = (booking) => {
   selectedBooking.value = booking;
   showModal.value = true;
 };
+
+const openEquipmentModal = async (booking) => {
+  currentBookingForEquipment.value = booking;
+  selectedBookingEquipments.value = [];
+
+  try {
+    // Fetch booking equipments
+    await equipmentBookingStore.fetchBookingEquipments();
+
+    // Filter equipments for this specific booking
+    const bookingEquipments = equipmentBookingStore.booking_equipment.filter(
+      (be) => String(be.booking_id) === String(booking.id)
+    );
+
+    // Get equipment details for each booking equipment
+    const equipmentDetails = [];
+    for (const be of bookingEquipments) {
+      try {
+        const equipment = await equipmentStore.getById(be.equipment_id);
+        if (equipment) {
+          equipmentDetails.push({
+            ...equipment,
+            quantity: be.quantity || 1,
+            booking_equipment_id: be.id,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching equipment details:", error);
+      }
+    }
+
+    selectedBookingEquipments.value = equipmentDetails;
+    showEquipmentModal.value = true;
+  } catch (error) {
+    console.error("Error fetching booking equipments:", error);
+    selectedBookingEquipments.value = [];
+    showEquipmentModal.value = true;
+  }
+};
+
+const closeEquipmentModal = () => {
+  showEquipmentModal.value = false;
+  selectedBookingEquipments.value = [];
+  currentBookingForEquipment.value = null;
+};
 </script>
 
 <template>
   <teleport to="body">
     <LoadingPage v-if="isLoading" />
   </teleport>
-  <h1 style="margin-left: 25px; font-size: 24px;">
+  <h1 style="margin-left: 25px; font-size: 24px">
     <i class="fa-solid fa-book-open"></i> รายการจองห้องประชุม
   </h1>
   <div class="container">
@@ -226,8 +280,9 @@ const openModal = (booking) => {
                 <th>วัน / เวลา ที่จอง</th>
                 <th>ผู้จอง</th>
                 <th>ห้องที่จอง</th>
-                <th>เวลาเริ่มจอง</th>
-                <th>เวลาสิ้นสุดจอง</th>
+                <th>เริ่มจองเวลา</th>
+                <th>ถึงเวลา</th>
+                <th>อุปกรณ์</th>
                 <th>สถานะ</th>
                 <th>ผู้ที่จัดการ</th>
               </tr>
@@ -241,8 +296,23 @@ const openModal = (booking) => {
                 <td>{{ formatDateTime(booking.end_time) }}</td>
                 <td>
                   <button
+                    v-if="!['Finished', 'Canceled'].includes(booking.status)"
+                    class="btn-equipment"
+                    @click="openEquipmentModal(booking)"
+                    title="ดูรายการอุปกรณ์ที่จอง"
+                  >
+                    <i class="fa-solid fa-list"></i> ดูอุปกรณ์
+                  </button>
+                  <span v-else class="no-equipment-text"> </span>
+                </td>
+                <td>
+                  <button
                     :class="statusClass(booking.status)"
-                    :disabled="['Approved', 'Canceled', 'Finished'].includes(booking.status)"
+                    :disabled="
+                      ['Approved', 'Canceled', 'Finished'].includes(
+                        booking.status
+                      )
+                    "
                     @click="openModal(booking)"
                   >
                     {{ booking.status }}
@@ -261,52 +331,50 @@ const openModal = (booking) => {
             </tbody>
           </table>
 
-          <div v-else class="no-data">ไม่มีการจองในขณะนี้</div>          
+          <div v-else class="no-data">ไม่มีการจองในขณะนี้</div>
         </div>
       </div>
-        <div class="pagination-bar">
-            <div class="pagination">
-            <button
-              :disabled="currentPage === 1"
-              @click="gotoPage(currentPage - 1)"
-            >
-              ก่อนหน้า
-            </button>
+      <div class="pagination-bar">
+        <div class="pagination">
+          <button
+            :disabled="currentPage === 1"
+            @click="gotoPage(currentPage - 1)"
+          >
+            ก่อนหน้า
+          </button>
 
-            <button
-              v-for="page in paginationRange"
-              :key="page + '-btn'"
-              :class="{ active: page === currentPage }"
-              @click="gotoPage(page)"
-              :disabled="page === '...'"
-            >
-              {{ page }}
-            </button>
+          <button
+            v-for="page in paginationRange"
+            :key="page + '-btn'"
+            :class="{ active: page === currentPage }"
+            @click="gotoPage(page)"
+            :disabled="page === '...'"
+          >
+            {{ page }}
+          </button>
 
-            <button
-              :disabled="currentPage === totalPages"
-              @click="gotoPage(currentPage + 1)"
-            >
-              ถัดไป
-            </button>
+          <button
+            :disabled="currentPage === totalPages"
+            @click="gotoPage(currentPage + 1)"
+          >
+            ถัดไป
+          </button>
 
-            <div class="page-jump">
-              <label>ไปหน้า:</label>
-              <input
-                type="number"
-                min="1"
-                :max="totalPages"
-                v-model.number="jumpToPage"
-                @keyup.enter="gotoPage(jumpToPage)"
-                :disabled="totalPages === 0"
-              />
-            </div>
+          <div class="page-jump">
+            <label>ไปหน้า:</label>
+            <input
+              type="number"
+              min="1"
+              :max="totalPages"
+              v-model.number="jumpToPage"
+              @keyup.enter="gotoPage(jumpToPage)"
+              :disabled="totalPages === 0"
+            />
           </div>
         </div>
+      </div>
     </div>
-    
   </div>
-  
 
   <teleport to="body">
     <div v-if="showModal" class="modal">
@@ -335,11 +403,81 @@ const openModal = (booking) => {
       </div>
     </div>
   </teleport>
+
+  <!-- Equipment Modal -->
+  <teleport to="body">
+    <div v-if="showEquipmentModal" class="modal">
+      <div class="modal-content equipment-modal">
+        <div class="modal-header">
+          <h3>
+            <i class="fa-solid fa-list"></i>
+            รายการอุปกรณ์ที่จอง
+          </h3>
+          <button @click="closeEquipmentModal" class="close-btn">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="booking-info">
+            <p>
+              <strong>ผู้จอง:</strong>
+              {{ currentBookingForEquipment?.user_name }}
+              {{ currentBookingForEquipment?.user_lastname }}
+            </p>
+            <p>
+              <strong>ห้อง:</strong> {{ currentBookingForEquipment?.room_name }}
+            </p>
+          </div>
+
+          <div
+            v-if="selectedBookingEquipments.length > 0"
+            class="equipment-list"
+          >
+            <div
+              v-for="equipment in selectedBookingEquipments"
+              :key="equipment.id"
+              class="equipment-item"
+            >
+              <div class="equipment-image">
+                <img
+                  :src="equipment.image_url || '/images/default-picture.png'"
+                  :alt="equipment.name"
+                  @error="$event.target.src = '/images/default-picture.png'"
+                />
+              </div>
+              <div class="equipment-details">
+                <span class="equipment-name">{{ equipment.name }}</span>
+              </div>
+              <span class="equipment-quantity"
+                >จำนวนที่จอง: {{ equipment.quantity }}</span
+              >
+            </div>
+          </div>
+
+          <div v-else class="no-equipment">
+            <i class="fa-solid fa-box-open"></i>
+            ไม่มีการจองอุปกรณ์
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button @click="closeEquipmentModal" class="btn-close">ปิด</button>
+        </div>
+      </div>
+    </div>
+  </teleport>
 </template>
 
 <style scoped>
 .container {
-  margin: 20px;
+  margin: 30px auto;
+  max-width: 1400px;
+  padding: 40px 30px;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e0e0e0;
 }
 
 .table {
@@ -348,22 +486,27 @@ const openModal = (booking) => {
 }
 
 h1 {
-  text-decoration: underline;
+  margin-left: 30px !important;
+  margin-bottom: 20px !important;
+  font-size: 32px !important;
+  color: #2d2d2d !important;
+  font-weight: 700 !important;
 }
 
 .status-filter {
-  padding: 16px;
+  padding: 20px;
   background: #f8f9fa;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
   display: inline-block;
+  margin-bottom: 24px;
 }
 
 .filter-title {
-  font-weight: bold;
-  margin-bottom: 8px;
+  font-weight: 600;
+  margin-bottom: 12px;
   display: block;
-  color: #333;
+  color: #2d2d2d;
   font-size: 16px;
 }
 
@@ -387,8 +530,8 @@ h1 {
 }
 
 .custom-checkbox:checked {
-  background-color: #13131f;
-  border-color: #13131f;
+  background-color: #2d2d2d;
+  border-color: #2d2d2d;
 }
 
 .custom-checkbox:checked::after {
@@ -401,87 +544,121 @@ h1 {
 }
 
 .custom-checkbox:hover {
-  border-color: #999;
+  border-color: #2d2d2d;
 }
 
 .custom-label {
   cursor: pointer;
   font-size: 14px;
-  color: #13131f;
+  color: #2d2d2d;
   user-select: none;
-  font-weight: bold;
+  font-weight: 600;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 20px;
+  margin-top: 0;
   background-color: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 th,
 td {
-  padding: 10px;
+  padding: 14px 12px;
   text-align: left;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 th {
-  background-color: #3d3c3c31;
-  color: #13131f;
-  font-weight: bold;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  color: #f5f5f5;
+  font-weight: 600;
 }
 
 tr:hover {
-  background-color: #f1f1f1;
+  background-color: #f8f9fa;
   transition: background-color 0.3s ease;
 }
 
 button {
-  padding: 5px 10px;
+  padding: 8px 16px;
   border: none;
-  border-radius: 5px;
+  border-radius: 8px;
   font-size: 14px;
-  color: rgb(255, 239, 239);
+  font-weight: 500;
+  color: white;
+  transition: all 0.2s;
 }
 
 .btn-pending {
-  background-color: #f9c749;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
 }
 
 .btn-pending:hover {
-  background-color: #d8ba6f;
-  transition: background-color 0.3s ease;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
 }
 
 .btn-approved {
-  background-color: #73ea8d;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
 }
 
 .btn-approved:hover {
-  background-color: #5bcf6b;
-  transition: background-color 0.3s ease;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
 .btn-cancel {
-  background-color: #f06666;
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
   text-decoration: line-through;
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
 }
 
 .btn-cancel:hover {
-  background-color: #d9534f;
-  transition: background-color 0.3s ease;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
 }
 
 .btn-finished {
-  background-color: #6c757d;
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
   text-decoration: line-through;
+  box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
 }
 
 .btn-finished:hover {
-  background-color: #5a6268;
-  transition: background-color 0.3s ease;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
+}
+
+.btn-equipment {
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  color: white;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-equipment:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
+}
+
+.no-equipment-text {
+  color: #6c757d;
+  font-style: italic;
+  text-align: center;
+  display: block;
 }
 
 .modal {
@@ -490,18 +667,23 @@ button {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(61, 60, 60, 0.5);
+  background-color: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(5px);
 }
 
 .modal-content {
-  background: whitesmoke;
-  padding: 20px;
-  border-radius: 10px;
+  background: #ffffff;
+  padding: 30px;
+  border-radius: 12px;
   text-align: center;
-  width: 400px;
+  min-width: 400px;
+  max-width: 600px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  border: 1px solid #e0e0e0;
 }
 
 .modal-actions button {
@@ -509,37 +691,41 @@ button {
 }
 
 .btn-close {
-  background-color: #f3c735;
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
 }
 
 .btn-close:hover {
-  background-color: #d8ba6f;
-  transition: background-color 0.3s ease;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
 }
 
 .booking-table-wrapper {
-  min-height: 400px; /* ✅ ปรับความสูงขั้นต่ำตามต้องการ */
+  min-height: 400px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  border: 1px solid #ddd;
-  padding: 16px;
+  border: 1px solid #e0e0e0;
+  padding: 0;
   background-color: #fff;
-  border-radius: 8px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .no-data {
   text-align: center;
-  padding: 20px;
+  padding: 40px 20px;
   font-style: italic;
-  color: #888;
+  color: #6c757d;
+  font-size: 16px;
 }
 
 .pagination {
   display: flex;
-  justify-content: center; 
+  justify-content: center;
   align-items: center;
-  flex-wrap: wrap; 
+  flex-wrap: wrap;
   gap: 5px;
 }
 
@@ -579,5 +765,154 @@ button {
   text-align: center;
   z-index: 50;
   display: flex;
+}
+
+/* Equipment Modal Styles */
+.equipment-modal {
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 10px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #2d2d2d;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 22px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #6c757d;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background-color: #f8f9fa;
+  color: #2d2d2d;
+  transform: scale(1.1);
+}
+
+.modal-body {
+  margin-bottom: 20px;
+}
+
+.booking-info {
+  background-color: #f8f9fa;
+  padding: 18px;
+  border-radius: 10px;
+  margin-bottom: 24px;
+  border-left: 4px solid #2d2d2d;
+}
+
+.booking-info p {
+  margin: 8px 0;
+  color: #495057;
+  font-size: 15px;
+}
+
+.equipment-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.equipment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px;
+  margin: 10px 0;
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  border-left: 4px solid #2d2d2d;
+  gap: 14px;
+  transition: all 0.2s;
+}
+
+.equipment-item:hover {
+  background-color: #e9ecef;
+  transform: translateX(4px);
+}
+
+.equipment-image {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.equipment-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.equipment-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.equipment-name {
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.equipment-description {
+  font-size: 12px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.equipment-quantity {
+  font-size: 14px;
+  color: #6b7280;
+  background-color: #e5e7eb;
+  padding: 2px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.no-equipment {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.no-equipment i {
+  font-size: 48px;
+  margin-bottom: 10px;
+  display: block;
+  color: #cbd5e0;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid #ddd;
+  padding-top: 15px;
 }
 </style>

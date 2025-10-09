@@ -28,10 +28,21 @@ export const useReport = defineStore("reports", {
           `${config.public.apiBase}/api/v1/reports/list`,
           {
             headers,
+            params: { page: 1, size: 1000 },
           }
         );
         if (response.status === 200) {
-          this.reports = response.data.data;
+          const root = response.data;
+          const payload = root?.data;
+          // Accept shapes: {data:[...]}, {data:{data:[...]}}, [...]
+          const list = Array.isArray(payload?.data)
+            ? payload.data
+            : Array.isArray(payload)
+            ? payload
+            : Array.isArray(root)
+            ? root
+            : [];
+          this.reports = list;
         } else {
           console.error("Error fetching reports:", response.statusText);
         }
@@ -42,8 +53,7 @@ export const useReport = defineStore("reports", {
       }
     },
 
-    
-async getById(id: string) {
+    async getById(id: string) {
       this.isLoading = true;
       try {
         const response = await axios.get(
@@ -126,4 +136,3 @@ async getById(id: string) {
     },
   },
 });
-

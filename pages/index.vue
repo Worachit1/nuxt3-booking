@@ -4,6 +4,7 @@ import LoadingPage from "~/components/Loading.vue";
 import { useBookingStore } from "@/store/bookingStore";
 import { useBuildingStore } from "@/store/buildingStore";
 import { useRoomStore } from "@/store/roomStore";
+import { useRoom_Types } from "@/store/room_typeStore";
 
 import { ElSelect, ElOption } from "element-plus";
 import "element-plus/dist/index.css";
@@ -16,6 +17,7 @@ const router = useRouter();
 const bookingStore = useBookingStore();
 const buildingStore = useBuildingStore();
 const roomStore = useRoomStore();
+const roomTypesStore = useRoom_Types();
 
 const buildings = ref([]);
 const selectedBuilding = ref(null);
@@ -25,6 +27,7 @@ const selectedRoom = ref(null);
 // Search states
 const searchRoomName = ref("");
 const searchCapacity = ref("");
+const searchRoomTypeId = ref("");
 const showRoomDropdown = ref(false);
 
 // Modal states
@@ -38,6 +41,8 @@ onMounted(async () => {
     await buildingStore.fetchBuildings();
     buildings.value = buildingStore.buildings;
     console.log("Buildings data:", buildings.value); // Debug
+    // Load room types for filtering
+    await roomTypesStore.fetchRoomTypes();
   } catch (error) {
     console.error("onMounted error:", error);
   } finally {
@@ -131,7 +136,14 @@ const filteredBuildingRooms = computed(() => {
       !searchCapacity.value ||
       (room.capacity && room.capacity >= parseInt(searchCapacity.value));
 
-    return nameMatch && capacityMatch;
+    // Filter by room type id
+    const typeId =
+      room.room_type_id ?? room.roomTypeId ?? room.type_id ?? room.typeId;
+    const typeMatch =
+      !searchRoomTypeId.value ||
+      String(typeId || "") === String(searchRoomTypeId.value || "");
+
+    return nameMatch && capacityMatch && typeMatch;
   });
 });
 
@@ -139,6 +151,7 @@ const filteredBuildingRooms = computed(() => {
 const clearSearch = () => {
   searchRoomName.value = "";
   searchCapacity.value = "";
+  searchRoomTypeId.value = "";
   showRoomDropdown.value = false;
 };
 
@@ -340,6 +353,23 @@ const orBlank = (v) =>
                     min="1"
                   />
                 </div>
+                <div class="search-input-group">
+                  <label for="searchRoomType">ประเภทห้อง:</label>
+                  <select
+                    id="searchRoomType"
+                    v-model="searchRoomTypeId"
+                    class="search-input"
+                  >
+                    <option value="">ทั้งหมด</option>
+                    <option
+                      v-for="rt in roomTypesStore.roomTypes"
+                      :key="rt.id"
+                      :value="rt.id"
+                    >
+                      {{ rt.name || rt.type || rt.id }}
+                    </option>
+                  </select>
+                </div>
                 <button @click="clearSearch" class="clear-button">
                   <i class="fa-solid fa-times"></i> ล้างการค้นหา
                 </button>
@@ -408,8 +438,8 @@ const orBlank = (v) =>
                     v-if="room.start_room != null && room.end_room != null"
                   >
                     <i class="fa-regular fa-clock"></i>
-                    {{ secondsToHHMM(room.start_room) }} -
-                    {{ secondsToHHMM(room.end_room) }}
+                    เวลาที่จองได้: {{ secondsToHHMM(room.start_room) }} -
+                    {{ secondsToHHMM(room.end_room) }} น.
                   </span>
                 </div>
               </div>
@@ -520,37 +550,42 @@ const orBlank = (v) =>
 <style scoped>
 .app-container {
   min-height: 100vh;
-  padding: 20px;
+  padding: 0;
+  background: #f5f5f5;
 }
 
 .main-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  max-width: 100%;
+  margin: 0;
+  background: #f5f5f5;
+  border-radius: 0;
+  box-shadow: none;
   overflow: hidden;
 }
 
 .page-header {
   text-align: center;
   padding: 40px 20px;
-  background: linear-gradient(135deg, #13131f 0%, #2d2d3a 100%);
-  color: white;
+  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  color: #f0f0f0;
+  border-bottom: 1px solid #4a4a4a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .page-header h1 {
-  font-size: 2.5rem;
-  margin: 0 0 10px 0;
+  font-size: 2rem;
+  margin: 0 0 8px 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 15px;
+  gap: 10px;
+  font-weight: 600;
+  color: #f5f5f5;
 }
 
 .page-header p {
-  font-size: 1.2rem;
-  opacity: 0.9;
+  font-size: 1rem;
+  color: #c0c0c0;
   margin: 0;
 }
 
@@ -569,25 +604,28 @@ const orBlank = (v) =>
 }
 
 .content-section {
-  padding: 40px;
+  padding: 40px 30px;
+  background: #f5f5f5;
 }
 
 .section-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 40px;
 }
 
 .section-header h2 {
-  font-size: 2rem;
+  font-size: 2.2rem;
   margin: 0 0 10px 0;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
+  color: #2d2d2d;
+  font-weight: 700;
 }
 
 .section-header p {
-  color: #6c757d;
+  color: #666;
   font-size: 1.1rem;
   margin: 0;
 }
@@ -595,37 +633,41 @@ const orBlank = (v) =>
 .action-section {
   text-align: center;
   padding: 30px;
-  background: #f8f9fa;
-  border-top: 1px solid #e9ecef;
+  background: #ffffff;
+  border-top: 1px solid #e0e0e0;
 }
 
 .create-booking-button {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  background: linear-gradient(135deg, #13131f 0%, #2d2d3a 100%);
-  color: white;
-  padding: 15px 30px;
+  gap: 8px;
+  background: linear-gradient(135deg, #4a4a4a 0%, #5a5a5a 100%);
+  color: #f0f0f0;
+  padding: 12px 24px;
   text-decoration: none;
-  border-radius: 50px;
-  font-weight: bold;
-  font-size: 1.1rem;
-  transition: transform 0.2s, box-shadow 0.2s;
-  box-shadow: 0 4px 15px rgba(19, 19, 31, 0.4);
+  border-radius: 25px;
+  font-weight: 500;
+  font-size: 1rem;
+  transition: all 0.3s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  border: 1px solid #666;
 }
 
 .create-booking-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(19, 19, 31, 0.6);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+  background: linear-gradient(135deg, #5a5a5a 0%, #6a6a6a 100%);
+  color: #ffffff;
 }
 
 /* Room Search Section */
 .room-search-section {
-  background: #f8f9fa;
-  padding: 20px;
+  background: #ffffff;
+  padding: 25px;
   border-radius: 12px;
   margin-bottom: 30px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .search-header {
@@ -635,12 +677,13 @@ const orBlank = (v) =>
 
 .search-header h3 {
   margin: 0;
-  color: #13131f;
+  color: #2d2d2d;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
-  font-size: 1.3rem;
+  font-size: 1.4rem;
+  font-weight: 600;
 }
 
 .search-inputs {
@@ -658,24 +701,26 @@ const orBlank = (v) =>
 }
 
 .search-input-group label {
-  font-weight: bold;
-  color: #495057;
+  font-weight: 600;
+  color: #333;
   font-size: 0.9rem;
 }
 
 .search-input {
-  padding: 10px 15px;
-  border: 2px solid #e9ecef;
+  padding: 10px 14px;
+  border: 2px solid #ddd;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   width: 200px;
-  transition: border-color 0.3s;
+  transition: all 0.2s;
+  background: #ffffff;
+  color: #333;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: #13131f;
-  box-shadow: 0 0 0 3px rgba(19, 19, 31, 0.1);
+  border-color: #2d2d2d;
+  box-shadow: 0 0 0 3px rgba(45, 45, 45, 0.1);
 }
 
 /* Dropdown Styles */
@@ -689,11 +734,11 @@ const orBlank = (v) =>
   top: 100%;
   left: 0;
   right: 0;
-  background: white;
-  border: 2px solid #e9ecef;
+  background: #ffffff;
+  border: 2px solid #ddd;
   border-top: none;
   border-radius: 0 0 8px 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 1000;
   max-height: 200px;
   overflow-y: auto;
@@ -703,11 +748,12 @@ const orBlank = (v) =>
   padding: 10px 15px;
   cursor: pointer;
   transition: background-color 0.2s;
-  border-bottom: 1px solid #f8f9fa;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333;
 }
 
 .dropdown-item:hover {
-  background-color: #f8f9fa;
+  background-color: #f8f8f8;
 }
 
 .dropdown-item:last-child {
@@ -722,34 +768,37 @@ const orBlank = (v) =>
 
 .room-name {
   font-weight: 600;
-  color: #13131f;
+  color: #2d2d2d;
 }
 
 .room-capacity {
   font-size: 0.85rem;
-  color: #6c757d;
+  color: #666;
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
 .clear-button {
-  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-  color: white;
+  background: linear-gradient(135deg, #e8e8e8 0%, #d0d0d0 100%);
+  color: #333;
   padding: 10px 20px;
-  border: none;
+  border: 1px solid #ccc;
   border-radius: 8px;
   cursor: pointer;
-  font-weight: bold;
-  transition: transform 0.2s;
+  font-weight: 500;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   gap: 8px;
   height: fit-content;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .clear-button:hover {
   transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  background: linear-gradient(135deg, #d8d8d8 0%, #c0c0c0 100%);
 }
 
 /* Custom Scrollbar for Dropdown */
@@ -775,12 +824,13 @@ const orBlank = (v) =>
 .no-results {
   text-align: center;
   padding: 60px 20px;
-  color: #6c757d;
+  color: #666;
 }
 
 .no-results h3 {
   margin: 0 0 10px 0;
   font-size: 1.5rem;
+  color: #333;
 }
 
 .no-results p {
@@ -800,54 +850,69 @@ const orBlank = (v) =>
 }
 
 .building-card {
-  background: white;
-  border-radius: 12px;
-  padding: 1px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   cursor: pointer;
-  transition: transform 0.3s, box-shadow 0.3s;
-  border: 2px solid transparent;
+  transition: all 0.3s ease;
+  border: none;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .building-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-  border-color: #13131f;
+  transform: translateY(-8px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+}
+
+.building-image {
+  width: 100%;
+  height: 220px;
+  overflow: hidden;
 }
 
 .building-image img {
-  max-width: 100vw;
   width: 100%;
-  height: 200px;
+  height: 100%;
   object-fit: cover;
-  border-radius: 8px;
-  margin-bottom: 15px;
+  display: block;
+}
+
+.building-info {
+  padding: 20px;
 }
 
 .building-info h3 {
-  margin: 0 0 10px 0;
-  color: #13131f;
-  font-size: 1.3rem;
+  margin: 0 0 12px 0;
+  color: #2d2d2d;
+  font-size: 1.4rem;
+  font-weight: 700;
 }
 
 .building-info p {
-  margin: 0 0 15px 0;
-  color: #6c757d;
-  line-height: 1.5;
+  margin: 0 0 16px 0;
+  color: #555;
+  line-height: 1.6;
+  font-size: 0.95rem;
 }
 
 .building-stats {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
 }
 
 .room-count {
-  color: #28a745;
-  font-weight: bold;
+  color: #2d2d2d;
+  font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
+  font-size: 0.95rem;
 }
 
 /* Rooms List Styles */
@@ -860,21 +925,25 @@ const orBlank = (v) =>
 }
 
 .back-button {
-  background: linear-gradient(135deg, #13131f 0%, #2d2d3a 100%);
-  color: white;
+  background: #ffffff;
+  color: #2d2d2d;
   padding: 10px 20px;
-  border: none;
-  border-radius: 25px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
   cursor: pointer;
   margin-bottom: 20px;
-  transition: transform 0.2s;
+  transition: all 0.2s;
   display: flex;
   align-items: center;
   gap: 8px;
+  font-weight: 500;
 }
 
 .back-button:hover {
-  transform: translateY(-2px);
+  background: #f8f8f8;
+  color: #000;
+  transform: translateX(-5px);
+  border-color: #2d2d2d;
 }
 
 .rooms-grid {
@@ -884,44 +953,50 @@ const orBlank = (v) =>
 }
 
 .room-card {
-  background: white;
+  background: #ffffff;
   border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  padding: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   cursor: pointer;
-  transition: transform 0.3s, box-shadow 0.3s;
-  border: 2px solid transparent;
+  transition: all 0.3s;
+  border: none;
+  overflow: hidden;
 }
 
 .room-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-  border-color: #28a745;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 .room-image img {
   width: 100%;
-  height: 150px;
+  height: 160px;
   object-fit: cover;
-  border-radius: 8px;
-  margin-bottom: 15px;
+  border-radius: 0;
+  margin-bottom: 0;
+}
+
+.room-info {
+  padding: 16px;
 }
 
 .room-info h3 {
   margin: 0 0 10px 0;
-  color: #28a745;
+  color: #2d2d2d;
   font-size: 1.2rem;
+  font-weight: 600;
 }
 
 .room-info p {
   margin: 0 0 15px 0;
-  color: #6c757d;
+  color: #555;
   line-height: 1.5;
+  font-size: 0.9rem;
 }
 
 .capacity {
-  color: #dc3545;
-  font-weight: bold;
+  color: #2d2d2d;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 5px;
@@ -936,33 +1011,34 @@ const orBlank = (v) =>
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  animation: fadeIn 0.3s ease;
 }
 
 .modal-content {
-  background: white;
-  border-radius: 16px;
+  background: #ffffff;
+  border-radius: 12px;
   width: 90%;
   max-width: 600px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-  animation: slideIn 0.3s ease;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  border: none;
 }
 
 .modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 25px;
-  border-bottom: 1px solid #e9ecef;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 24px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #ffffff;
+  border-radius: 12px 12px 0 0;
 }
 
 .modal-header h3 {
   margin: 0;
-  color: #13131f;
+  color: #2d2d2d;
   font-size: 1.5rem;
+  font-weight: 700;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -973,15 +1049,16 @@ const orBlank = (v) =>
   border: none;
   font-size: 28px;
   cursor: pointer;
-  color: #6c757d;
+  color: #666;
   padding: 5px;
   border-radius: 50%;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
 }
 
 .close-button:hover {
-  background-color: #f8f9fa;
-  color: #dc3545;
+  background-color: #f0f0f0;
+  transform: rotate(90deg);
+  color: #000;
 }
 
 .modal-body {
@@ -998,57 +1075,65 @@ const orBlank = (v) =>
 
 .room-details p {
   margin: 15px 0;
-  color: #333;
-  font-size: 1.1rem;
-  line-height: 1.6;
+  color: #555;
+  font-size: 1rem;
+  line-height: 1.7;
 }
 
 .room-details strong {
-  color: #495057;
+  color: #2d2d2d;
+  font-weight: 600;
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 15px;
-  padding: 25px;
-  border-top: 1px solid #e9ecef;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  gap: 12px;
+  padding: 20px 24px;
+  border-top: 1px solid #e0e0e0;
+  background: #fafafa;
 }
 
 .booking-button {
-  background: linear-gradient(135deg, #13131f 0%, #2d2d3a 100%);
-  color: white;
-  padding: 12px 25px;
+  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+  color: #ffffff;
+  padding: 12px 24px;
   border: none;
-  border-radius: 25px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: bold;
+  font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 8px;
-  transition: transform 0.2s;
+  gap: 6px;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .booking-button:hover {
   transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(135deg, #1a1a1a 0%, #000000 100%);
 }
 
 .cancel-button {
-  background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-  color: white;
-  padding: 12px 25px;
-  border: none;
-  border-radius: 25px;
+  background: #ffffff;
+  color: #666;
+  padding: 12px 24px;
+  border: 2px solid #ddd;
+  border-radius: 8px;
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 8px;
-  transition: transform 0.2s;
+  gap: 6px;
+  transition: all 0.2s;
+  font-weight: 500;
 }
 
 .cancel-button:hover {
+  background: #f8f8f8;
   transform: translateY(-2px);
+  color: #333;
+  border-color: #999;
 }
 
 /* Unavailable badge on room card */
@@ -1129,26 +1214,7 @@ const orBlank = (v) =>
   font-weight: 800;
 }
 
-/* Animations */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideIn {
-  from {
-    transform: translateY(-50px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
+/* Removed animations for minimal design */
 
 /* Responsive */
 @media (max-width: 768px) {

@@ -4,6 +4,8 @@ import LoadingPage from "@/components/Loading.vue";
 import { useBookingStore } from "@/store/bookingStore";
 import { useUserStore } from "@/store/userStore";
 import { useReviewStore } from "@/store/reviewStore";
+import { useEquipmentBookingStore } from "@/store/equipmentBookingStore";
+import { useEquipmentStore } from "@/store/equipmentStore";
 import { ref, onMounted, computed, nextTick, watch } from "vue";
 import { storeToRefs } from "pinia";
 import dayjs from "dayjs";
@@ -27,6 +29,8 @@ const userId = route.params.id || localStorage.getItem("user_id");
 const bookingStore = useBookingStore();
 const userStore = useUserStore();
 const reviewStore = useReviewStore();
+const equipmentBookingStore = useEquipmentBookingStore();
+const equipmentStore = useEquipmentStore();
 
 const bookings = ref([]);
 const user = ref(null);
@@ -47,6 +51,11 @@ const lastSubmittedReviews = ref({});
 const checkedByBooking = ref({});
 // Background check indicator
 const checkingReviews = ref(false);
+
+// Equipment modal
+const showEquipmentModal = ref(false);
+const selectedBookingEquipments = ref([]);
+const currentBookingForEquipment = ref(null);
 
 const { isLoading: userLoading } = storeToRefs(userStore);
 const { isLoading: bookingLoading } = storeToRefs(bookingStore);
@@ -378,6 +387,51 @@ const gotoPage = (page) => {
   currentPage.value = page;
   jumpToPage.value = page;
 };
+
+const openEquipmentModal = async (booking) => {
+  currentBookingForEquipment.value = booking;
+  selectedBookingEquipments.value = [];
+
+  try {
+    // Fetch booking equipments
+    await equipmentBookingStore.fetchBookingEquipments();
+
+    // Filter equipments for this specific booking
+    const bookingEquipments = equipmentBookingStore.booking_equipment.filter(
+      (be) => String(be.booking_id) === String(booking.id)
+    );
+
+    // Get equipment details for each booking equipment
+    const equipmentDetails = [];
+    for (const be of bookingEquipments) {
+      try {
+        const equipment = await equipmentStore.getById(be.equipment_id);
+        if (equipment) {
+          equipmentDetails.push({
+            ...equipment,
+            quantity: be.quantity || 1,
+            booking_equipment_id: be.id,
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching equipment details:", error);
+      }
+    }
+
+    selectedBookingEquipments.value = equipmentDetails;
+    showEquipmentModal.value = true;
+  } catch (error) {
+    console.error("Error fetching booking equipments:", error);
+    selectedBookingEquipments.value = [];
+    showEquipmentModal.value = true;
+  }
+};
+
+const closeEquipmentModal = () => {
+  showEquipmentModal.value = false;
+  selectedBookingEquipments.value = [];
+  currentBookingForEquipment.value = null;
+};
 </script>
 
 <template>
@@ -415,8 +469,9 @@ const gotoPage = (page) => {
             <tr>
               <th>วัน/เวลาที่จอง</th>
               <th>ห้องที่จอง</th>
-              <th>เวลาเริ่ม</th>
-              <th>เวลาสิ้นสุด</th>
+              <th>เริ่มจองเวลา</th>
+              <th>ถึงเวลา</th>
+              <th>อุปกรณ์</th>
               <th>สถานะ</th>
               <th>การดำเนินการ</th>
               <th>ความคิดเห็น</th>
@@ -428,7 +483,17 @@ const gotoPage = (page) => {
               <td>{{ booking.room_name }}</td>
               <td>{{ formatDateTime(booking.start_time) }}</td>
               <td>{{ formatDateTime(booking.end_time) }}</td>
-
+              <td>
+                <button
+                  v-if="!['Finished', 'Canceled'].includes(booking.status)"
+                  class="btn-equipment"
+                  @click="openEquipmentModal(booking)"
+                  title="ดูรายการอุปกรณ์ที่จอง"
+                >
+                  <i class="fa-solid fa-list"></i> ดูอุปกรณ์
+                </button>
+                <span v-else class="no-equipment-text"></span>
+              </td>
               <td>
                 <button
                   :class="statusClass(booking.status)"
@@ -619,6 +684,70 @@ const gotoPage = (page) => {
       </div>
     </teleport>
   </div>
+
+  <!-- Equipment Modal -->
+  <teleport to="body">
+    <div v-if="showEquipmentModal" class="modal-overlay">
+      <div class="modal-content equipment-modal">
+        <div class="modal-header">
+          <h3>
+            <i class="fa-solid fa-list"></i>
+            รายการอุปกรณ์ที่จอง
+          </h3>
+          <button @click="closeEquipmentModal" class="close-btn">
+            <i class="fa-solid fa-times"></i>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="booking-info">
+            <p>
+              <strong>ผู้จอง:</strong>
+              {{ currentBookingForEquipment?.user_name || user?.first_name }}
+              {{ currentBookingForEquipment?.user_lastname || user?.last_name }}
+            </p>
+            <p>
+              <strong>ห้อง:</strong> {{ currentBookingForEquipment?.room_name }}
+            </p>
+          </div>
+
+          <div
+            v-if="selectedBookingEquipments.length > 0"
+            class="equipment-list"
+          >
+            <div
+              v-for="equipment in selectedBookingEquipments"
+              :key="equipment.id"
+              class="equipment-item"
+            >
+              <div class="equipment-image">
+                <img
+                  :src="equipment.image_url || '/images/default-picture.png'"
+                  :alt="equipment.name"
+                  @error="$event.target.src = '/images/default-picture.png'"
+                />
+              </div>
+              <div class="equipment-details">
+                <span class="equipment-name">{{ equipment.name }}</span>
+              </div>
+              <span class="equipment-quantity"
+                >จำนวน: {{ equipment.quantity }}</span
+              >
+            </div>
+          </div>
+
+          <div v-else class="no-equipment">
+            <i class="fa-solid fa-box-open"></i>
+            ไม่มีการจองอุปกรณ์
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button @click="closeEquipmentModal" class="btn-close">ปิด</button>
+        </div>
+      </div>
+    </div>
+  </teleport>
 </template>
 
 <style scoped>
@@ -774,6 +903,30 @@ button {
 
 .btn-cancelbooking:hover {
   background-color: #d9534f;
+}
+
+.btn-equipment {
+  background-color: #17a2b8;
+  color: white;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.btn-equipment:hover {
+  background-color: #138496;
+  transition: background-color 0.3s ease;
+}
+
+.no-equipment-text {
+  color: #6c757d;
+  font-style: italic;
+  text-align: center;
+  display: block;
 }
 
 .btn-reviewed {
@@ -1045,5 +1198,143 @@ button {
 .review-detail-text {
   margin-top: 10px;
   white-space: pre-wrap;
+}
+
+/* Equipment Modal Styles */
+.equipment-modal {
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 10px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #13131f;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #666;
+  padding: 5px;
+  border-radius: 3px;
+}
+
+.close-btn:hover {
+  background-color: #f0f0f0;
+  color: #13131f;
+}
+
+.modal-body {
+  margin-bottom: 20px;
+}
+
+.booking-info {
+  background-color: #f8f9fa;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border-left: 4px solid #17a2b8;
+}
+
+.booking-info p {
+  margin: 5px 0;
+  color: #495057;
+}
+
+.equipment-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.equipment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  margin: 8px 0;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 3px solid #17a2b8;
+  gap: 12px;
+}
+
+.equipment-image {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.equipment-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.equipment-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.equipment-name {
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.equipment-description {
+  font-size: 12px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.equipment-quantity {
+  font-size: 14px;
+  color: #6b7280;
+  background-color: #e5e7eb;
+  padding: 2px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.no-equipment {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.no-equipment i {
+  font-size: 48px;
+  margin-bottom: 10px;
+  display: block;
+  color: #cbd5e0;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid #ddd;
+  padding-top: 15px;
 }
 </style>

@@ -71,6 +71,11 @@ const formatCreatedAt = (rep) => {
 
     <div v-if="reportStore.reports.length === 0" class="no-data">
       ยังไม่มีการรายงานปัญหา
+      <div style="margin-top: 8px">
+        <button class="edit-btn" @click="reportStore.fetchReports()">
+          โหลดข้อมูลอีกครั้ง
+        </button>
+      </div>
     </div>
 
     <div v-else class="table-wrapper">
@@ -80,7 +85,7 @@ const formatCreatedAt = (rep) => {
             <th>ลำดับ</th>
             <th>ห้อง</th>
             <th>รายละเอียด</th>
-            <th>แจ้งโดย (user_id)</th>
+            <th>แจ้งโดย</th>
             <th>วันที่แจ้ง</th>
             <th>การจัดการ</th>
           </tr>
@@ -90,7 +95,9 @@ const formatCreatedAt = (rep) => {
             <td>{{ idx + 1 }}</td>
             <td>{{ roomName(rep.room_id) }}</td>
             <td class="desc">{{ rep.description }}</td>
-            <td>{{ rep.user_id }}</td>
+            <td>
+              {{ rep.name_user || rep.user_name || rep.user || rep.user_id }}
+            </td>
             <td>{{ formatCreatedAt(rep) }}</td>
             <td>
               <button class="edit-btn" @click="goEditRoom(rep.room_id)">

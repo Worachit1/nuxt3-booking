@@ -10,6 +10,8 @@ import { useRoute, useRouter } from "vue-router";
 import { useBookingStore } from "@/store/bookingStore";
 import { useBuildingStore } from "@/store/buildingStore";
 import { useRoomStore } from "@/store/roomStore";
+import { useEquipmentBookingStore } from "@/store/equipmentBookingStore";
+import { useEquipmentStore } from "@/store/equipmentStore";
 import { ElSelect, ElOption } from "element-plus";
 import "element-plus/dist/index.css";
 import dayjs from "dayjs";
@@ -34,6 +36,8 @@ const roomId = ref(route.params.id);
 const roomStore = useRoomStore();
 const bookingStore = useBookingStore();
 const buildingStore = useBuildingStore();
+const equipmentBookingStore = useEquipmentBookingStore();
+const equipmentStore = useEquipmentStore();
 
 const { isLoading } = storeToRefs(buildingStore, bookingStore);
 
@@ -42,6 +46,7 @@ const events = ref([]);
 const calendarRef = ref(null);
 const popupVisible = ref(false);
 const selectedEvent = ref(null);
+const selectedEventEquipments = ref([]);
 const searchDate = ref(null);
 const loading = ref(false);
 
@@ -68,9 +73,9 @@ const loadBookings = async () => {
   try {
     await bookingStore.fetchBookingByRoomId(roomId.value);
 
-    // แสดงการจองทั้งหมด รวมถึง Finished แต่ไม่รวม Canceled
+    // แสดงการจองทั้งหมด (ยกเว้น Canceled) — รองรับตัวพิมพ์เล็ก/ใหญ่ของสถานะ
     const filteredBookings = bookingStore.bookings.filter(
-      (booking) => booking.status !== "Canceled"
+      (booking) => String(booking.status || "").toLowerCase() !== "canceled"
     );
 
     if (filteredBookings.length > 0) {
@@ -79,6 +84,14 @@ const loadBookings = async () => {
       const roomData = await roomStore.getById(roomId.value);
       roomName.value = roomData ? roomData.name : "ไม่พบชื่อห้อง";
     }
+
+    const toMs = (v) => {
+      if (v == null) return null;
+      const n = Number(v);
+      if (!Number.isFinite(n)) return null;
+      // ถ้าน้อยกว่า 10^12 ถือว่าเป็นวินาที -> แปลงเป็น ms
+      return n < 1000000000000 ? n * 1000 : n;
+    };
 
     events.value = filteredBookings.map((booking) => {
       let backgroundColor = "#04bd35"; // Approved - เขียว
@@ -90,8 +103,8 @@ const loadBookings = async () => {
         title: booking.title || "ไม่ระบุหัวข้อ",
         room_name: booking.room_name || "ไม่ระบุห้อง",
         description: booking.description || "ไม่ระบุรายละเอียด",
-        start: booking.start_time * 1000,
-        end: booking.end_time * 1000,
+        start: toMs(booking.start_time),
+        end: toMs(booking.end_time),
         first_name: booking.user_name || "ไม่ระบุชื่อ",
         last_name: booking.user_lastname || "ไม่ระบุนามสกุล",
         backgroundColor,
@@ -118,11 +131,54 @@ watch(
 
 function handleEventClick(info) {
   selectedEvent.value = info.event;
+  selectedEventEquipments.value = [];
+  
+  // Fetch equipment bookings for Approved and Pending bookings only
+  const status = info.event.extendedProps?.status;
+  if (status === "Approved" || status === "Pending") {
+    fetchEquipmentsForBooking(info.event.id);
+  }
+  
   popupVisible.value = true;
 }
 
 function closePopup() {
   popupVisible.value = false;
+  selectedEventEquipments.value = [];
+}
+
+async function fetchEquipmentsForBooking(bookingId) {
+  try {
+    // Fetch booking equipments
+    await equipmentBookingStore.fetchBookingEquipments();
+    
+    // Filter equipments for this specific booking
+    const bookingEquipments = equipmentBookingStore.booking_equipment.filter(
+      (be) => String(be.booking_id) === String(bookingId)
+    );
+    
+    // Get equipment details for each booking equipment
+    const equipmentDetails = [];
+    for (const be of bookingEquipments) {
+      try {
+        const equipment = await equipmentStore.getById(be.equipment_id);
+        if (equipment) {
+          equipmentDetails.push({
+            ...equipment,
+            quantity: be.quantity || 1,
+            booking_equipment_id: be.id
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching equipment details:", error);
+      }
+    }
+    
+    selectedEventEquipments.value = equipmentDetails;
+  } catch (error) {
+    console.error("Error fetching booking equipments:", error);
+    selectedEventEquipments.value = [];
+  }
 }
 
 function goToDate() {
@@ -141,6 +197,20 @@ const todayBookings = computed(() => {
   );
 });
 
+// Pagination for today's bookings
+const todayPage = ref(1);
+const todayPageSize = 10;
+const todayTotalPages = computed(() =>
+  Math.max(1, Math.ceil(todayBookings.value.length / todayPageSize))
+);
+const todayPageItems = computed(() => {
+  const start = (todayPage.value - 1) * todayPageSize;
+  return todayBookings.value.slice(start, start + todayPageSize);
+});
+watch(todayBookings, () => {
+  if (todayPage.value > todayTotalPages.value) todayPage.value = 1;
+});
+
 const dailyBookings = computed(() => {
   const grouped = {};
   events.value.forEach((event) => {
@@ -151,6 +221,30 @@ const dailyBookings = computed(() => {
     grouped[date].push(event);
   });
   return grouped;
+});
+
+// Show "รวมทั้งหมด" section only if there is at least one Approved booking (case-insensitive)
+const hasApprovedBookings = computed(() =>
+  events.value.some((e) => String(e.status || "").toLowerCase() === "approved")
+);
+
+// Flatten approved bookings for pagination
+const allApprovedBookings = computed(() =>
+  events.value
+    .filter((e) => String(e.status || "").toLowerCase() === "approved")
+    .sort((a, b) => (a.start || 0) - (b.start || 0))
+);
+const allPage = ref(1);
+const allPageSize = 10;
+const allTotalPages = computed(() =>
+  Math.max(1, Math.ceil(allApprovedBookings.value.length / allPageSize))
+);
+const allPageItems = computed(() => {
+  const start = (allPage.value - 1) * allPageSize;
+  return allApprovedBookings.value.slice(start, start + allPageSize);
+});
+watch(allApprovedBookings, () => {
+  if (allPage.value > allTotalPages.value) allPage.value = 1;
 });
 
 const buildings = ref([]);
@@ -302,7 +396,7 @@ const calendarOptions = computed(() => ({
             <i class="fa-solid fa-calendar-days" style="font-size: 27px"></i>
             <span>ปฏิทินการจอง</span>
           </div>
-          <div class="room-search">
+          <!-- <div class="room-search">
             <label style="margin-right: 7px; font-weight: bold"
               >เลือกอาคาร:</label
             >
@@ -346,7 +440,7 @@ const calendarOptions = computed(() => ({
             >
               <i class="fa-solid fa-magnifying-glass"></i> ไปยังห้องที่เลือก
             </button>
-          </div>
+          </div> -->
         </div>
         <div class="header-calendar">
           <div class="calendar-header-row">
@@ -405,7 +499,7 @@ const calendarOptions = computed(() => ({
               </thead>
               <tbody>
                 <tr
-                  v-for="(event, index) in todayBookings"
+                  v-for="(event, index) in todayPageItems"
                   :key="index"
                   :class="[
                     index % 2 === 0 ? 'row-even' : 'row-odd',
@@ -441,66 +535,86 @@ const calendarOptions = computed(() => ({
                 </tr>
               </tbody>
             </table>
+            <div class="pagination" v-if="todayTotalPages > 1">
+              <button
+                class="page-btn"
+                :disabled="todayPage === 1"
+                @click="todayPage = Math.max(1, todayPage - 1)"
+              >
+                ← กลับ
+              </button>
+              <span class="page-info"
+                >หน้า {{ todayPage }} / {{ todayTotalPages }}</span
+              >
+              <button
+                class="page-btn"
+                :disabled="todayPage === todayTotalPages"
+                @click="todayPage = Math.min(todayTotalPages, todayPage + 1)"
+              >
+                ถัดไป →
+              </button>
+            </div>
           </div>
           <div v-else>ไม่มีการจองในวันนี้</div>
         </div>
 
-        <!-- 📋 รวมทั้งหมด -->
+        <!-- 📋 รวมทั้งหมด (เฉพาะ Approved) พร้อมแบ่งหน้า -->
         <div class="all-bookings">
           <h2>📋 ตารางรวมการจองทั้งหมด</h2>
-
-          <!-- ตรวจสอบว่ามีข้อมูล approved อย่างน้อย 1 รายการในทุกวันรวมกัน -->
-          <div v-if="hasApprovedBookings">
-            <div v-for="(events, date) in dailyBookings" :key="date">
-              <!-- กรองเฉพาะที่ Approved -->
-              <template
-                v-if="events.filter((e) => e.status === 'Approved').length > 0"
-              >
-                <h3>
-                  {{
-                    dayjs(date, "YYYY-MM-DD").locale("th").format("D MMMM YYYY")
-                  }}
-                </h3>
-                <table
-                  border="1"
-                  cellpadding="8"
-                  cellspacing="0"
-                  style="width: 100%; margin-bottom: 20px"
+          <div v-if="allApprovedBookings.length > 0">
+            <table
+              border="1"
+              cellpadding="8"
+              cellspacing="0"
+              style="width: 100%; margin-bottom: 20px"
+            >
+              <thead>
+                <tr class="header-row">
+                  <th>วันที่</th>
+                  <th>หัวข้อ</th>
+                  <th>รายละเอียด</th>
+                  <th>เริ่ม</th>
+                  <th>สิ้นสุด</th>
+                  <th>ผู้จอง</th>
+                  <th>ห้องที่จอง</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(event, index) in allPageItems"
+                  :key="index"
+                  :class="[index % 2 === 0 ? 'row-even' : 'row-odd']"
                 >
-                  <thead>
-                    <tr class="header-row">
-                      <th>หัวข้อ</th>
-                      <th>รายละเอียด</th>
-                      <th>เริ่ม</th>
-                      <th>สิ้นสุด</th>
-                      <th>ผู้จอง</th>
-                      <th>ห้องที่จอง</th>
-                      <th>สถานะ</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="(event, index) in events.filter(
-                        (e) => e.status === 'Approved'
-                      )"
-                      :key="index"
-                      :class="[index % 2 === 0 ? 'row-even' : 'row-odd']"
-                    >
-                      <td>{{ event.title }}</td>
-                      <td>{{ event.description }}</td>
-                      <td>{{ formatDateTime(event.start) }}</td>
-                      <td>{{ formatDateTime(event.end) }}</td>
-                      <td>{{ event.first_name }} {{ event.last_name }}</td>
-                      <td>{{ event.room_name }}</td>
-                      <td>
-                        <span class="status-badge status-approved"
-                          >อนุมัติ</span
-                        >
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </template>
+                  <td>
+                    {{ dayjs(event.start).locale("th").format("D MMMM YYYY") }}
+                  </td>
+                  <td>{{ event.title }}</td>
+                  <td>{{ event.description }}</td>
+                  <td>{{ formatDateTime(event.start) }}</td>
+                  <td>{{ formatDateTime(event.end) }}</td>
+                  <td>{{ event.first_name }} {{ event.last_name }}</td>
+                  <td>{{ event.room_name }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="pagination" v-if="allTotalPages > 1">
+              <button
+                class="page-btn"
+                :disabled="allPage === 1"
+                @click="allPage = Math.max(1, allPage - 1)"
+              >
+                ← กลับ
+              </button>
+              <span class="page-info"
+                >หน้า {{ allPage }} / {{ allTotalPages }}</span
+              >
+              <button
+                class="page-btn"
+                :disabled="allPage === allTotalPages"
+                @click="allPage = Math.min(allTotalPages, allPage + 1)"
+              >
+                ถัดไป →
+              </button>
             </div>
           </div>
           <div v-else>ไม่มีข้อมูลการจอง</div>
@@ -563,6 +677,36 @@ const calendarOptions = computed(() => ({
                 }}
               </span>
             </p>
+            
+            <!-- แสดงอุปกรณ์ที่จอง (เฉพาะ Approved และ Pending) -->
+            <div 
+              v-if="selectedEvent?.extendedProps?.status === 'Approved' || selectedEvent?.extendedProps?.status === 'Pending'"
+              class="equipment-section"
+            >
+              <p><strong>อุปกรณ์ที่จอง:</strong></p>
+              <div v-if="selectedEventEquipments.length > 0" class="equipment-list">
+                <div 
+                  v-for="equipment in selectedEventEquipments" 
+                  :key="equipment.id"
+                  class="equipment-item"
+                >
+                  <div class="equipment-image">
+                    <img 
+                      :src="equipment.image_url || '/images/default-picture.png'" 
+                      :alt="equipment.name"
+                      @error="$event.target.src = '/images/default-picture.png'"
+                    />
+                  </div>
+                  <div class="equipment-details">
+                    <span class="equipment-name">{{ equipment.name }}</span>
+                  </div>
+                  <span class="equipment-quantity">จำนวน: {{ equipment.quantity }}</span>
+                </div>
+              </div>
+              <div v-else class="no-equipment">
+                ไม่มีการจองอุปกรณ์
+              </div>
+            </div>
           </div>
           <div class="popup-footer">
             <button @click="closePopup">ปิด</button>
@@ -723,13 +867,19 @@ h2 {
 
 .popup-wrapper {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   background-color: rgba(0, 0, 0, 0.3);
   z-index: 500;
   animation: fadeIn 0.2s ease-in-out;
+  overflow-y: auto;
+  padding: 40px 20px;
+  box-sizing: border-box;
 }
 
 .popup-content {
@@ -737,12 +887,14 @@ h2 {
   padding: 24px;
   border-radius: 16px;
   width: 100%;
-  max-width: 420px;
+  max-width: 500px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
   animation: scaleIn 0.25s ease;
-  max-height: 90vh;
-  overflow-y: auto;
   font-weight: 600;
+  position: relative;
+  margin: auto;
 }
 
 .popup-header {
@@ -858,6 +1010,30 @@ h2 {
 .booking-button:hover {
   background-color: #4a4a4a;
   transition: background-color 0.3s ease;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0 5px;
+}
+.page-btn {
+  background-color: #13131f;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.page-btn:disabled {
+  background-color: #adb5bd;
+  cursor: not-allowed;
+}
+.page-info {
+  font-weight: 700;
 }
 
 .fc {
@@ -993,6 +1169,113 @@ h2 {
     width: 100%;
     margin-top: 10px;
   }
+
+  .popup-wrapper {
+    padding: 20px 10px;
+    align-items: flex-start;
+    padding-top: 40px;
+  }
+
+  .popup-content {
+    max-width: 100%;
+    max-height: calc(100vh - 60px);
+    margin: 0;
+    padding: 20px;
+  }
+
+  .equipment-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .equipment-image {
+    align-self: center;
+  }
+
+  .equipment-details {
+    text-align: center;
+    width: 100%;
+  }
+
+  .equipment-quantity {
+    align-self: center;
+  }
+}
+
+/* Equipment section styles */
+.equipment-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.equipment-list {
+  margin-top: 8px;
+}
+
+.equipment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  margin: 8px 0;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  border-left: 3px solid #13131f;
+  gap: 12px;
+}
+
+.equipment-image {
+  flex-shrink: 0;
+  width: 50px;
+  height: 50px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.equipment-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.equipment-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.equipment-name {
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+}
+
+.equipment-description {
+  font-size: 12px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.equipment-quantity {
+  font-size: 14px;
+  color: #6b7280;
+  background-color: #e5e7eb;
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+.no-equipment {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #f3f4f6;
+  border-radius: 6px;
+  color: #6b7280;
+  font-style: italic;
+  text-align: center;
 }
 
 /* สำคัญ! บังคับ parent ทุกชั้นไม่ให้ขยาย */
