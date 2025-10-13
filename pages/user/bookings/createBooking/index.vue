@@ -52,7 +52,7 @@ const filteredRooms = computed(() => {
 watch(
   () => Booking.value.building_id,
   (newVal) => {
-    const building = buildingStore.buildings.find(b => b.id === newVal);
+    const building = buildingStore.buildings.find((b) => b.id === newVal);
     if (building && building.rooms_name && building.rooms_name.length > 0) {
       Booking.value.room_id = building.rooms_name[0].id;
     } else {
@@ -243,109 +243,127 @@ const handleCancel = () => {
   <teleport to="body">
     <LoadingPage v-if="isLoading" />
   </teleport>
-  <div class="container">
-    <h2 class="h2"><i class="fa-solid fa-location-pin"></i> จองห้องประชุม</h2>
-    <form @submit.prevent="handleConfirm" class="booking-form">
-      <div class="form-row">
-        <div class="form-group">
-          <label for="title">หัวข้อการประชุม:</label>
-          <input id="title" v-model="Booking.title" type="text" required />
-        </div>
-        <div class="form-group">
-          <label for="start_time">วันเวลาเริ่มจอง:</label>
-          <input
-            id="start_time"
-            v-model="Booking.start_time"
-            type="datetime-local"
-            required
-          />
-        </div>
-        <div class="form-group">
-          <label for="end_time">วันเวลาสิ้นสุดการจอง:</label>
-          <input
-            id="end_time"
-            v-model="Booking.end_time"
-            type="datetime-local"
-            required
-          />
+
+  <div class="page-container">
+    <!-- Hero Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="header-left">
+          <div class="header-icon">
+            <i class="fa-solid fa-calendar-plus"></i>
+          </div>
+          <div class="header-text">
+            <h1>จองห้องประชุม</h1>
+            <p class="subtitle">สร้างการจองห้องประชุมใหม่</p>
+          </div>
         </div>
       </div>
+    </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="building_id">อาคาร:</label>
-          <el-select
-            v-model="Booking.building_id"
-            placeholder="--- กรุณาเลือกอาคาร ---"
-            style="width: 100%"
-            filterable
-            required
-          >
-            <el-option
-              v-for="building in buildingStore.buildings"
-              :key="building.id"
-              :label="building.name"
-              :value="building.id"
+    <div class="container">
+      <form @submit.prevent="handleConfirm" class="booking-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="title">หัวข้อการประชุม:</label>
+            <input id="title" v-model="Booking.title" type="text" required />
+          </div>
+          <div class="form-group">
+            <label for="start_time">วันเวลาเริ่มจอง:</label>
+            <input
+              id="start_time"
+              v-model="Booking.start_time"
+              type="datetime-local"
+              required
             />
-          </el-select>
-        </div>
-        <div class="form-group">
-          <label for="room_id">ห้องที่จอง:</label>
-          <el-select
-            v-model="Booking.room_id"
-            placeholder="--- กรุณาเลือกห้อง ---"
-            style="width: 100%"
-            filterable
-            :disabled="!Booking.building_id"
-            required
-          >
-            <el-option
-              v-for="room in filteredRooms"
-              :key="room.id"
-              :label="room.name"
-              :value="room.id"
+          </div>
+          <div class="form-group">
+            <label for="end_time">วันเวลาสิ้นสุดการจอง:</label>
+            <input
+              id="end_time"
+              v-model="Booking.end_time"
+              type="datetime-local"
+              required
             />
-          </el-select>
+          </div>
         </div>
-        <div v-if="user" class="form-group">
-          <label for="user_id">ผู้ที่จองห้องประชุม:</label>
-          <input
-            disabled
-            id="user"
-            :value="user.first_name + ' ' + user.last_name"
-            type="text"
-            required
-            style="color: #c2c4c3"
-          />
-        </div>
-        <div v-if="user" class="form-group">
-          <label for="phone">เบอร์ติดต่อ:</label>
-          <input
-            disabled
-            id="phone"
-            :value="user.phone"
-            type="text"
-            required
-            style="color: #c2c4c3"
-          />
-        </div>
-      </div>
 
-      <div class="form-row">
-        <div class="form-group">
-          <label for="description">รายละเอียดการประชุม:</label>
-          <textarea
-            id="description"
-            v-model="Booking.description"
-            required
-          ></textarea>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="building_id">อาคาร:</label>
+            <el-select
+              v-model="Booking.building_id"
+              placeholder="--- กรุณาเลือกอาคาร ---"
+              style="width: 100%"
+              filterable
+              required
+            >
+              <el-option
+                v-for="building in buildingStore.buildings"
+                :key="building.id"
+                :label="building.name"
+                :value="building.id"
+              />
+            </el-select>
+          </div>
+          <div class="form-group">
+            <label for="room_id">ห้องที่จอง:</label>
+            <el-select
+              v-model="Booking.room_id"
+              placeholder="--- กรุณาเลือกห้อง ---"
+              style="width: 100%"
+              filterable
+              :disabled="!Booking.building_id"
+              required
+            >
+              <el-option
+                v-for="room in filteredRooms"
+                :key="room.id"
+                :label="room.name"
+                :value="room.id"
+              />
+            </el-select>
+          </div>
+          <div v-if="user" class="form-group">
+            <label for="user_id">ผู้ที่จองห้องประชุม:</label>
+            <input
+              disabled
+              id="user"
+              :value="user.first_name + ' ' + user.last_name"
+              type="text"
+              required
+              style="color: #c2c4c3"
+            />
+          </div>
+          <div v-if="user" class="form-group">
+            <label for="phone">เบอร์ติดต่อ:</label>
+            <input
+              disabled
+              id="phone"
+              :value="user.phone"
+              type="text"
+              required
+              style="color: #c2c4c3"
+            />
+          </div>
         </div>
-      </div>
 
-      <button type="submit" class="create">
-        <i class="fa-solid fa-circle-plus"></i> สร้างการจอง
-      </button>
-    </form>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="description">รายละเอียดการประชุม:</label>
+            <textarea
+              id="description"
+              v-model="Booking.description"
+              required
+            ></textarea>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit">
+          <i class="fa-solid fa-circle-plus"></i>
+          สร้างการจอง
+        </button>
+      </form>
+    </div>
   </div>
 
   <teleport to="body">
@@ -431,240 +449,347 @@ const handleCancel = () => {
 </template>
 
 <style scoped>
-@media (min-width: 1024px) {
-  .modal-content {
-    max-width: 700px;
-    padding: 40px 48px;
-  }
-
-  .container {
-    max-width: 1000px;
-  }
-
-  .create {
-    width: 15%;
-  }
+/* Page Container */
+.page-container {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding: 100px 20px 40px 20px;
 }
 
+/* Hero Header */
+.page-header {
+  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+  padding: 32px 20px;
+  margin-bottom: 32px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.header-content {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-icon {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: white;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+}
+
+.header-text h1 {
+  margin: 0;
+  font-size: 32px;
+  color: white;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Container */
 .container {
-  padding: 25px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  margin: 20px auto;
-  width: 90%;
-  max-width: 800px;
+  max-width: 1000px;
+  margin: 0 auto;
+  background: white;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 2px solid #e0e0e0;
 }
 
-.h2 {
-  color: #13131f;
-  font-size: 21px;
-  margin-bottom: 20px;
-  text-align: center;
-  font-weight: bold;
-  text-align: left;
-}
-
+/* Booking Form */
 .booking-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  max-width: 800px;
-  margin: 0 auto;
+  gap: 24px;
 }
 
 .form-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
-  justify-content: space-between;
 }
 
 .form-group {
-  flex: 1;
   display: flex;
   flex-direction: column;
 }
 
 .form-group label {
-  margin-bottom: 5px;
-  font-weight: bold;
-}
-
-input,
-select,
-textarea {
-  padding: 8px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #2d2d2d;
   font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
-textarea {
-  height: 100px;
-}
-
-.create {
-  padding: 10px 20px;
-  background-color: #13131f;
-  color: white;
-  border: none;
-  border-radius: 9px;
-  cursor: pointer;
-  margin-top: 20px;
-  width: 20%;
-  align-self: center;
-}
-
-.create:hover {
-  background-color: #4a4a4a;
-  transition: background-color 0.3s;
-}
-
-.modal-buttons {
   display: flex;
-  justify-content: flex-end;
-  /* ดันไปด้านขวาสุด */
-  gap: 20px;
-  /* ระยะห่างระหว่างปุ่ม */
-  margin-top: 20px;
+  align-items: center;
+  gap: 6px;
 }
 
-.confirm {
-  background-color: #04bd35;
+.form-group input,
+.form-group textarea {
+  padding: 12px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 15px;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+}
+
+.form-group input:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.form-group textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+/* Element Plus Select Styling */
+:deep(.el-select) {
+  width: 100%;
+}
+
+:deep(.el-input__wrapper) {
+  padding: 10px 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  box-shadow: none;
+  transition: all 0.3s ease;
+}
+
+:deep(.el-input__wrapper:hover) {
+  border-color: #fbbf24;
+}
+
+:deep(.el-input__wrapper.is-focus) {
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+}
+
+/* Submit Button */
+.btn-submit {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
   color: white;
-  padding: 8px 16px;
   border: none;
-  border-radius: 6px;
+  padding: 14px 32px;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
   cursor: pointer;
-}
-
-.confirm:hover {
-  background-color: #039d2b;
-  transition: background-color 0.3s;
-}
-
-.cancel {
-  position: absolute;
-  top: 16px;
-  right: 20px;
-  color: #13131f;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 20px;
-}
-
-.cancel:hover {
-  background-color: #e63939;
-  color: white;
-  transition: background-color 0.5s;
-}
-
-/* Modal overlay */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 10px;
+  align-self: center;
+  min-width: 200px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+  margin-top: 10px;
 }
 
-/* กล่อง modal */
+.btn-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(251, 191, 36, 0.4);
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease;
+}
+
 .modal-content {
   position: relative;
-  background-color: #ffffff;
+  background: white;
   border-radius: 16px;
-  width: 70%;
-  max-width: 560px;
-  max-height: 80vh;
+  width: 90%;
+  max-width: 700px;
+  max-height: 85vh;
   overflow-y: auto;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
-  padding: 32px;
-  animation: fadeInUp 0.3s ease-out;
-  transition: all 0.3s ease;
-  color: #1f2937;
-  margin-top: 45px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
 }
 
-/* ปิด modal */
-.cancel {
-  position: absolute;
-  top: 16px;
-  right: 20px;
-  background: transparent;
-  border: none;
-  font-size: 20px;
-  color: #333;
-  cursor: pointer;
-}
-
-.cancel:hover {
-  color: red;
-  transition: color 0.3s ease;
-}
-
-/* หัวข้อ modal */
 .modal-title {
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 20px;
-  color: #111827;
-  text-align: center;
+  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+  color: white;
+  padding: 24px 32px;
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 3px solid #fbbf24;
 }
 
-/* เนื้อหา section */
+.modal-title i {
+  color: #fbbf24;
+  font-size: 24px;
+}
+
+.modal-content > div:not(.modal-title):not(.modal-buttons) {
+  padding: 0 32px;
+}
+
 .modal-section {
-  margin-bottom: 16px;
+  margin: 24px 32px;
+}
+
+.modal-section:first-of-type {
+  margin-top: 32px;
 }
 
 .modal-section strong {
-  display: block;
-  margin-bottom: 6px;
-  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #2d2d2d;
+  font-size: 15px;
 }
 
-/* รายละเอียด */
+.modal-section strong i {
+  color: #fbbf24;
+  font-size: 16px;
+}
+
 .detail {
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  padding: 12px 16px;
+  background: #f9fafb;
+  border: 2px solid #e5e7eb;
+  border-left: 4px solid #fbbf24;
+  border-radius: 8px;
+  padding: 14px 18px;
   color: #374151;
   font-size: 15px;
   line-height: 1.6;
+  margin: 0;
 }
 
-/* ปุ่มต่าง ๆ */
+.form-group {
+  margin: 24px 32px;
+}
+
+.form-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: #2d2d2d;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.form-group label i {
+  color: #fbbf24;
+  font-size: 16px;
+}
+
+/* Modal Buttons */
 .modal-buttons {
+  padding: 20px 32px 32px 32px;
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  margin-top: 20px;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 24px;
 }
 
 .confirm {
-  background-color: #04bd35;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: white;
-  padding: 10px 18px;
+  padding: 12px 28px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 15px;
   cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
 }
 
 .confirm:hover {
-  background-color: #039d2b;
-  transition: background-color 0.3s;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
 }
 
-/* Animation */
-@keyframes fadeInUp {
+.cancel {
+  position: absolute;
+  top: 24px;
+  right: 32px;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.3s ease;
+}
+
+.cancel:hover {
+  background: rgba(220, 53, 69, 0.9);
+  transform: scale(1.1);
+}
+
+/* Animations */
+@keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
   }
   to {
     opacity: 1;
@@ -672,11 +797,64 @@ textarea {
   }
 }
 
-/* Responsive เพิ่มเติม */
-@media (min-width: 1024px) {
+/* Responsive */
+@media (max-width: 768px) {
+  .page-container {
+    padding: 100px 12px 40px 12px;
+  }
+
+  .page-header {
+    padding: 24px 16px;
+  }
+
+  .header-left {
+    gap: 12px;
+  }
+
+  .header-icon {
+    width: 56px;
+    height: 56px;
+    font-size: 28px;
+  }
+
+  .header-text h1 {
+    font-size: 24px;
+  }
+
+  .container {
+    padding: 24px 20px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .btn-submit {
+    width: 100%;
+  }
+
   .modal-content {
-    padding: 40px;
-    max-width: 700px;
+    width: 95%;
+    max-height: 90vh;
+  }
+
+  .modal-title {
+    padding: 20px 24px;
+    font-size: 18px;
+  }
+
+  .modal-section,
+  .form-group {
+    margin: 20px 24px;
+  }
+
+  .modal-buttons {
+    padding: 16px 24px 24px 24px;
+  }
+
+  .cancel {
+    top: 20px;
+    right: 24px;
   }
 }
 </style>

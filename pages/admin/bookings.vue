@@ -242,98 +242,146 @@ const closeEquipmentModal = () => {
   <teleport to="body">
     <LoadingPage v-if="isLoading" />
   </teleport>
-  <h1 style="margin-left: 25px; font-size: 24px">
-    <i class="fa-solid fa-book-open"></i> รายการจองห้องประชุม
-  </h1>
-  <div class="container">
-    <div class="row">
-      <div class="col-md-12">
-        <!-- ตัวกรองสถานะ -->
-        <div class="status-filter mb-3">
-          <label class="filter-title">กรองตามสถานะ:</label>
-          <div
-            class="status-option"
+
+  <div class="page-container">
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="header-icon">
+          <i class="fa-solid fa-calendar-check"></i>
+        </div>
+        <div class="header-text">
+          <h1>จัดการการจองห้องประชุม</h1>
+          <p class="subtitle">ตรวจสอบและอนุมัติการจองห้องประชุมทั้งหมด</p>
+        </div>
+      </div>
+      <div class="header-stats">
+        <div class="stat-card">
+          <div class="stat-icon pending">
+            <i class="fa-solid fa-clock"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">รอการอนุมัติ</span>
+            <span class="stat-value">{{
+              filteredBookings.filter((b) => b.status === "Pending").length
+            }}</span>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon approved">
+            <i class="fa-solid fa-check-circle"></i>
+          </div>
+          <div class="stat-info">
+            <span class="stat-label">อนุมัติแล้ว</span>
+            <span class="stat-value">{{
+              filteredBookings.filter((b) => b.status === "Approved").length
+            }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- Filter Section -->
+      <div class="filter-section">
+        <div class="filter-header">
+          <i class="fa-solid fa-filter"></i>
+          <span>กรองตามสถานะ</span>
+        </div>
+        <div class="filter-options">
+          <label
+            class="filter-checkbox"
             v-for="status in allStatuses"
             :key="status"
           >
-            <input
-              class="custom-checkbox"
-              type="checkbox"
-              :id="status"
-              :value="status"
-              v-model="selectedStatuses"
-            />
-            <label class="custom-label" :for="status">
+            <input type="checkbox" :value="status" v-model="selectedStatuses" />
+            <span class="checkmark"></span>
+            <span
+              class="filter-label"
+              :class="'status-' + status.toLowerCase()"
+            >
+              <i
+                :class="{
+                  'fa-solid fa-clock': status === 'Pending',
+                  'fa-solid fa-check-circle': status === 'Approved',
+                  'fa-solid fa-times-circle': status === 'Canceled',
+                  'fa-solid fa-flag-checkered': status === 'Finished',
+                }"
+              ></i>
               {{ statusMap[status] }}
-            </label>
-          </div>
-        </div>
-
-        <!-- ตาราง -->
-        <div class="booking-table-wrapper">
-          <table
-            class="table table-bordered table-striped"
-            v-if="filteredBookings.length"
-          >
-            <thead>
-              <tr>
-                <th>วัน / เวลา ที่จอง</th>
-                <th>ผู้จอง</th>
-                <th>ห้องที่จอง</th>
-                <th>เริ่มจองเวลา</th>
-                <th>ถึงเวลา</th>
-                <th>อุปกรณ์</th>
-                <th>สถานะ</th>
-                <th>ผู้ที่จัดการ</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="booking in filteredBookings" :key="booking.id">
-                <td>{{ formatDateTime(booking.created_at) }}</td>
-                <td>{{ booking.user_name }} {{ booking.user_lastname }}</td>
-                <td>{{ booking.room_name }}</td>
-                <td>{{ formatDateTime(booking.start_time) }}</td>
-                <td>{{ formatDateTime(booking.end_time) }}</td>
-                <td>
-                  <button
-                    v-if="!['Finished', 'Canceled'].includes(booking.status)"
-                    class="btn-equipment"
-                    @click="openEquipmentModal(booking)"
-                    title="ดูรายการอุปกรณ์ที่จอง"
-                  >
-                    <i class="fa-solid fa-list"></i> ดูอุปกรณ์
-                  </button>
-                  <span v-else class="no-equipment-text"> </span>
-                </td>
-                <td>
-                  <button
-                    :class="statusClass(booking.status)"
-                    :disabled="
-                      ['Approved', 'Canceled', 'Finished'].includes(
-                        booking.status
-                      )
-                    "
-                    @click="openModal(booking)"
-                  >
-                    {{ booking.status }}
-                  </button>
-                </td>
-                <td>
-                  <span>
-                    {{
-                      booking.nameapproved_by
-                        ? booking.nameapproved_by
-                        : "ยังไม่ได้อนุมัติ"
-                    }}
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div v-else class="no-data">ไม่มีการจองในขณะนี้</div>
+            </span>
+          </label>
         </div>
       </div>
+
+      <!-- ตาราง -->
+      <div class="booking-table-wrapper">
+        <table
+          class="table table-bordered table-striped"
+          v-if="filteredBookings.length"
+        >
+          <thead>
+            <tr>
+              <th>วัน / เวลา ที่จอง</th>
+              <th>ผู้จอง</th>
+              <th>ห้องที่จอง</th>
+              <th>เริ่มจองเวลา</th>
+              <th>ถึงเวลา</th>
+              <th>อุปกรณ์</th>
+              <th>สถานะ</th>
+              <th>ผู้ที่จัดการ</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="booking in filteredBookings" :key="booking.id">
+              <td>{{ formatDateTime(booking.created_at) }}</td>
+              <td>{{ booking.user_name }} {{ booking.user_lastname }}</td>
+              <td>{{ booking.room_name }}</td>
+              <td>{{ formatDateTime(booking.start_time) }}</td>
+              <td>{{ formatDateTime(booking.end_time) }}</td>
+              <td>
+                <button
+                  v-if="!['Finished', 'Canceled'].includes(booking.status)"
+                  class="btn-equipment"
+                  @click="openEquipmentModal(booking)"
+                  title="ดูรายการอุปกรณ์ที่จอง"
+                >
+                  <i class="fa-solid fa-list"></i> ดูอุปกรณ์
+                </button>
+                <span v-else class="no-equipment-text"> </span>
+              </td>
+              <td>
+                <button
+                  :class="statusClass(booking.status)"
+                  :disabled="
+                    ['Approved', 'Canceled', 'Finished'].includes(
+                      booking.status
+                    )
+                  "
+                  @click="openModal(booking)"
+                >
+                  {{ booking.status }}
+                </button>
+              </td>
+              <td>
+                <span>
+                  {{
+                    booking.nameapproved_by
+                      ? booking.nameapproved_by
+                      : "ยังไม่ได้อนุมัติ"
+                  }}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div v-else class="empty-state">
+          <i class="fa-solid fa-inbox"></i>
+          <p>ไม่มีการจองในขณะนี้</p>
+        </div>
+      </div>
+
       <div class="pagination-bar">
         <div class="pagination">
           <button
@@ -470,178 +518,420 @@ const closeEquipmentModal = () => {
 </template>
 
 <style scoped>
-.container {
-  margin: 30px auto;
+/* Page Container */
+.page-container {
+  background: #f5f5f5;
+  min-height: 100vh;
+  padding: 100px 20px 40px 20px;
+}
+
+/* Page Header */
+.page-header {
+  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+  border-radius: 16px;
+  padding: 30px 40px;
+  margin-bottom: 30px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   max-width: 1400px;
-  padding: 40px 30px;
+  margin-left: auto;
+  margin-right: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.header-icon {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+}
+
+.header-text h1 {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 28px !important;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  line-height: 1.2;
+}
+
+.subtitle {
+  color: #cbd5e0;
+  font-size: 14px;
+  margin: 8px 0 0 0;
+}
+
+.header-stats {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  min-width: 160px;
+}
+
+.stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+}
+
+.stat-icon.pending {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #ffffff;
+}
+
+.stat-icon.approved {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #cbd5e0;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+/* Container */
+.container {
+  margin: 0 auto;
+  max-width: 1400px;
+  padding: 0;
+}
+
+/* Filter Section */
+.filter-section {
   background: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e0e0e0;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-h1 {
-  margin-left: 30px !important;
-  margin-bottom: 20px !important;
-  font-size: 32px !important;
-  color: #2d2d2d !important;
-  font-weight: 700 !important;
-}
-
-.status-filter {
-  padding: 20px;
-  background: #f8f9fa;
-  border: 2px solid #e0e0e0;
-  border-radius: 12px;
-  display: inline-block;
+  padding: 24px;
   margin-bottom: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 2px solid #e0e0e0;
 }
 
-.filter-title {
-  font-weight: 600;
-  margin-bottom: 12px;
-  display: block;
-  color: #2d2d2d;
-  font-size: 16px;
-}
-
-.status-option {
-  display: inline-flex;
+.filter-header {
+  display: flex;
   align-items: center;
-  margin-right: 16px;
-  margin-bottom: 8px;
+  gap: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #2d2d2d;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #e0e0e0;
 }
 
-.custom-checkbox {
-  appearance: none;
-  width: 18px;
-  height: 18px;
-  border: 2px solid #ccc;
-  border-radius: 4px;
-  margin-right: 8px;
-  position: relative;
+.filter-header i {
+  color: #fbbf24;
+}
+
+.filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.filter-checkbox {
+  display: flex;
+  align-items: center;
   cursor: pointer;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
+  padding: 12px 20px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  border: 2px solid #e0e0e0;
+  transition: all 0.3s ease;
+  position: relative;
 }
 
-.custom-checkbox:checked {
+.filter-checkbox:hover {
+  background: #e9ecef;
+  border-color: #2d2d2d;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.filter-checkbox input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.checkmark {
+  height: 22px;
+  width: 22px;
+  background-color: #ffffff;
+  border: 2px solid #ccc;
+  border-radius: 6px;
+  display: inline-block;
+  position: relative;
+  margin-right: 10px;
+  transition: all 0.2s ease;
+}
+
+.filter-checkbox input:checked ~ .checkmark {
   background-color: #2d2d2d;
   border-color: #2d2d2d;
 }
 
-.custom-checkbox:checked::after {
-  content: "✔";
-  color: white;
-  font-size: 12px;
+.filter-checkbox input:checked ~ .checkmark:after {
+  content: "";
   position: absolute;
-  top: -2%;
-  left: 3px;
+  display: block;
+  left: 7px;
+  top: 3px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  transform: rotate(45deg);
 }
 
-.custom-checkbox:hover {
-  border-color: #2d2d2d;
-}
-
-.custom-label {
-  cursor: pointer;
+.filter-label {
   font-size: 14px;
-  color: #2d2d2d;
-  user-select: none;
   font-weight: 600;
+  color: #2d2d2d;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-label i {
+  font-size: 16px;
+}
+
+.filter-label.status-pending i {
+  color: #fbbf24;
+}
+
+.filter-label.status-approved i {
+  color: #10b981;
+}
+
+.filter-label.status-canceled i {
+  color: #dc3545;
+}
+
+.filter-label.status-finished i {
+  color: #6c757d;
+}
+
+/* Table Section */
+.booking-table-wrapper {
+  background: #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 2px solid #e0e0e0;
+  min-height: 400px;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-  margin-top: 0;
   background-color: #ffffff;
-  border-radius: 8px;
-  overflow: hidden;
 }
 
-th,
-td {
-  padding: 14px 12px;
-  text-align: left;
-  border-bottom: 1px solid #e0e0e0;
+thead {
+  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 th {
-  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
-  color: #f5f5f5;
+  padding: 18px 16px;
+  text-align: left;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 3px solid #fbbf24;
+}
+
+th i {
+  margin-right: 6px;
+  color: #fbbf24;
+}
+
+tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+  transition: all 0.3s ease;
+}
+
+tbody tr:hover {
+  background-color: #f8f9fa;
+  transform: scale(1.01);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+tbody tr:last-child {
+  border-bottom: none;
+}
+
+td {
+  padding: 16px;
+  text-align: left;
+  font-size: 14px;
+  color: #333;
+  vertical-align: middle;
+}
+
+.date-cell,
+.time-cell {
+  color: #6c757d;
+  font-size: 13px;
+}
+
+.date-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-wrapper i {
+  color: #fbbf24;
+}
+
+.user-cell {
   font-weight: 600;
 }
 
-tr:hover {
-  background-color: #f8f9fa;
-  transition: background-color 0.3s ease;
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
+.user-info i {
+  color: #2d2d2d;
+  font-size: 18px;
+}
+
+.room-badge {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  color: #1565c0;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 13px;
+  display: inline-block;
+  border: 1px solid #90caf9;
+}
+
+.manager-name {
+  color: #6c757d;
+  font-style: italic;
+  font-size: 13px;
+}
+
+/* Button Styles */
 button {
-  padding: 8px 16px;
   border: none;
   border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  color: white;
-  transition: all 0.2s;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.status-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  min-width: 140px;
+  justify-content: center;
 }
 
 .btn-pending {
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #92400e;
+  border: 2px solid #fbbf24;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
 }
 
 .btn-pending:hover {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #ffffff;
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
 }
 
 .btn-approved {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-}
-
-.btn-approved:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #065f46;
+  border: 2px solid #10b981;
+  cursor: not-allowed;
+  opacity: 0.9;
 }
 
 .btn-cancel {
-  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #991b1b;
+  border: 2px solid #dc3545;
   text-decoration: line-through;
-  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
-}
-
-.btn-cancel:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+  cursor: not-allowed;
+  opacity: 0.9;
 }
 
 .btn-finished {
-  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
+  color: #374151;
+  border: 2px solid #6c757d;
   text-decoration: line-through;
-  box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
-}
-
-.btn-finished:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
+  cursor: not-allowed;
+  opacity: 0.9;
 }
 
 .btn-equipment {
-  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
+  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
   color: white;
-  cursor: pointer;
+  padding: 8px 16px;
   font-size: 13px;
-  padding: 8px 14px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   white-space: nowrap;
@@ -649,215 +939,379 @@ button {
 }
 
 .btn-equipment:hover {
+  background: linear-gradient(135deg, #3a3a3a 0%, #2d2d2d 100%);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
 }
 
-.no-equipment-text {
-  color: #6c757d;
+.no-equipment {
+  color: #9ca3af;
   font-style: italic;
   text-align: center;
-  display: block;
 }
 
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #9ca3af;
+}
+
+.empty-state i {
+  font-size: 64px;
+  color: #e5e7eb;
+  margin-bottom: 16px;
+}
+
+.empty-state p {
+  font-size: 16px;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Pagination */
+.pagination-bar {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  background: #ffffff;
+  padding: 16px 24px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  border: 2px solid #e0e0e0;
+}
+
+.pagination button {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  min-width: 40px;
+}
+
+.pagination button:not(.active):not(:disabled) {
+  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+  color: white;
+}
+
+.pagination button:not(.active):not(:disabled):hover {
+  background: linear-gradient(135deg, #3a3a3a 0%, #2d2d2d 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.pagination button.active {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+}
+
+.pagination button:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.page-jump {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 16px;
+  padding-left: 16px;
+  border-left: 2px solid #e0e0e0;
+}
+
+.page-jump label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2d2d2d;
+}
+
+.page-jump input {
+  width: 60px;
+  padding: 8px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.page-jump input:focus {
+  outline: none;
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+}
+
+/* Modal Styles */
 .modal {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(0, 0, 0, 0.7);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
-  backdrop-filter: blur(5px);
+  z-index: 9999;
+  backdrop-filter: blur(8px);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .modal-content {
   background: #ffffff;
-  padding: 30px;
-  border-radius: 12px;
-  text-align: center;
+  border-radius: 16px;
   min-width: 400px;
   max-width: 600px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-  border: 1px solid #e0e0e0;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border: 2px solid #e0e0e0;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Regular Modal (Approve/Reject) */
+.modal-content h3 {
+  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+  color: #ffffff;
+  padding: 24px 30px;
+  margin: 0;
+  border-radius: 14px 14px 0 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.modal-content p {
+  padding: 0 30px;
+  margin: 16px 0;
+  font-size: 15px;
+  color: #374151;
+}
+
+.modal-content p strong {
+  color: #2d2d2d;
+  font-weight: 700;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px 30px 30px;
 }
 
 .modal-actions button {
-  margin: 10px;
+  padding: 12px 28px;
+  font-size: 15px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-actions .btn-approved {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+}
+
+.modal-actions .btn-approved:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+.modal-actions .btn-cancel {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: white;
+  border: none;
+  text-decoration: none;
+}
+
+.modal-actions .btn-cancel:hover {
+  background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(220, 53, 69, 0.4);
 }
 
 .btn-close {
   background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
-  box-shadow: 0 2px 8px rgba(108, 117, 125, 0.3);
+  color: white;
+  padding: 12px 28px;
+  font-size: 15px;
+  border-radius: 10px;
 }
 
 .btn-close:hover {
+  background: linear-gradient(135deg, #5a6268 0%, #4e555b 100%);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(108, 117, 125, 0.4);
+  box-shadow: 0 6px 16px rgba(108, 117, 125, 0.4);
 }
 
-.booking-table-wrapper {
-  min-height: 400px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  border: 1px solid #e0e0e0;
-  padding: 0;
-  background-color: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-}
-
-.no-data {
-  text-align: center;
-  padding: 40px 20px;
-  font-style: italic;
-  color: #6c757d;
-  font-size: 16px;
-}
-
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.pagination button {
-  padding: 6px 12px;
-  font-size: 14px;
-  cursor: pointer;
-  background-color: #13131f;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  transition: background-color 0.2s ease;
-}
-
-.pagination button:hover:not(:disabled) {
-  background-color: #444760;
-}
-
-.pagination button:disabled {
-  background-color: #e0e0e0;
-  color: #777;
-  cursor: not-allowed;
-  opacity: 1;
-}
-
-.pagination button.active {
-  background-color: #f5f5f5;
-  color: #13131f;
-  font-weight: bold;
-  border: 1px solid #ccc;
-}
-.pagination-bar {
-  position: fixed;
-  justify-content: center;
-  width: 100%;
-  margin-top: 5px;
-  text-align: center;
-  z-index: 50;
-  display: flex;
-}
-
-/* Equipment Modal Styles */
+/* Equipment Modal */
 .equipment-modal {
-  max-width: 600px;
-  max-height: 80vh;
-  overflow-y: auto;
+  max-width: 700px;
 }
 
 .modal-header {
+  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+  padding: 24px 30px;
+  border-radius: 14px 14px 0 0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #ddd;
-  padding-bottom: 10px;
 }
 
 .modal-header h3 {
+  background: none;
+  padding: 0;
   margin: 0;
-  color: #2d2d2d;
+  color: #ffffff;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   font-weight: 700;
   font-size: 22px;
 }
 
+.modal-header h3 i {
+  color: #fbbf24;
+}
+
 .close-btn {
-  background: none;
+  background: rgba(255, 255, 255, 0.1);
   border: none;
-  font-size: 20px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  color: #6c757d;
-  padding: 8px;
-  border-radius: 6px;
+  color: #ffffff;
+  font-size: 18px;
   transition: all 0.2s;
 }
 
 .close-btn:hover {
-  background-color: #f8f9fa;
-  color: #2d2d2d;
-  transform: scale(1.1);
+  background: rgba(255, 255, 255, 0.2);
+  transform: rotate(90deg);
 }
 
 .modal-body {
-  margin-bottom: 20px;
+  padding: 30px;
 }
 
 .booking-info {
-  background-color: #f8f9fa;
-  padding: 18px;
-  border-radius: 10px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 20px;
+  border-radius: 12px;
   margin-bottom: 24px;
-  border-left: 4px solid #2d2d2d;
+  border-left: 4px solid #fbbf24;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .booking-info p {
-  margin: 8px 0;
-  color: #495057;
+  margin: 10px 0;
+  padding: 0;
+  color: #374151;
   font-size: 15px;
+  line-height: 1.6;
+}
+
+.booking-info strong {
+  color: #2d2d2d;
+  font-weight: 700;
+  margin-right: 6px;
 }
 
 .equipment-list {
   max-height: 400px;
   overflow-y: auto;
+  padding-right: 10px;
+}
+
+.equipment-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.equipment-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.equipment-list::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 10px;
+}
+
+.equipment-list::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
 }
 
 .equipment-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 14px;
-  margin: 10px 0;
-  background-color: #f8f9fa;
-  border-radius: 10px;
-  border-left: 4px solid #2d2d2d;
-  gap: 14px;
-  transition: all 0.2s;
+  padding: 16px;
+  margin: 12px 0;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: 12px;
+  border: 2px solid #e0e0e0;
+  border-left: 4px solid #fbbf24;
+  gap: 16px;
+  transition: all 0.3s ease;
 }
 
 .equipment-item:hover {
-  background-color: #e9ecef;
-  transform: translateX(4px);
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  transform: translateX(6px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-left-width: 6px;
 }
 
 .equipment-image {
   flex-shrink: 0;
-  width: 50px;
-  height: 50px;
-  border-radius: 6px;
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
   overflow: hidden;
-  border: 1px solid #e5e7eb;
+  border: 2px solid #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .equipment-image img {
@@ -870,49 +1324,127 @@ button {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .equipment-name {
-  font-weight: 600;
-  color: #374151;
-  font-size: 14px;
+  font-weight: 700;
+  color: #2d2d2d;
+  font-size: 15px;
 }
 
 .equipment-description {
-  font-size: 12px;
+  font-size: 13px;
   color: #6b7280;
   font-style: italic;
 }
 
 .equipment-quantity {
   font-size: 14px;
-  color: #6b7280;
-  background-color: #e5e7eb;
-  padding: 2px 8px;
-  border-radius: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  padding: 6px 14px;
+  border-radius: 20px;
   white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(251, 191, 36, 0.3);
 }
 
 .no-equipment {
-  text-align: center;
-  padding: 40px 20px;
-  color: #6b7280;
-  font-style: italic;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #9ca3af;
 }
 
 .no-equipment i {
-  font-size: 48px;
-  margin-bottom: 10px;
-  display: block;
-  color: #cbd5e0;
+  font-size: 64px;
+  margin-bottom: 16px;
+  color: #e5e7eb;
 }
 
 .modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  border-top: 1px solid #ddd;
-  padding-top: 15px;
+  padding: 20px 30px 30px;
+  border-top: 2px solid #e0e0e0;
+  margin-top: 10px;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-stats {
+    width: 100%;
+  }
+
+  .stat-card {
+    flex: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .page-container {
+    padding: 80px 10px 20px 10px;
+  }
+
+  .page-header {
+    padding: 20px;
+  }
+
+  .header-text h1 {
+    font-size: 22px !important;
+  }
+
+  .filter-section {
+    padding: 16px;
+  }
+
+  .filter-options {
+    flex-direction: column;
+  }
+
+  .filter-checkbox {
+    width: 100%;
+  }
+
+  table {
+    font-size: 12px;
+  }
+
+  th,
+  td {
+    padding: 10px 8px;
+  }
+
+  .stat-card {
+    min-width: 100%;
+  }
+
+  .pagination {
+    padding: 12px;
+    flex-wrap: wrap;
+  }
+
+  .page-jump {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: none;
+    margin-top: 12px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .modal-content {
+    min-width: 90%;
+    max-width: 95%;
+    margin: 10px;
+  }
 }
 </style>

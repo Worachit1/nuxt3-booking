@@ -203,131 +203,177 @@ onMounted(async () => {
   <teleport to="body">
     <LoadingPage v-if="isLoading" />
   </teleport>
-  <div class="container">
+
+  <div class="page-container">
     <!-- แสดงรายการอาคาร -->
     <div v-if="!selectedBuilding">
-      <div class="header-row">
-        <h1><i class="fa-solid fa-building"></i> รายการห้องภายในอาคาร</h1>
-        <button
-          class="btn-create"
-          @click="router.push('/admin/rooms/createRoom')"
-        >
-          <i class="fa-solid fa-circle-plus"></i> เพิ่มห้อง
-        </button>
+      <!-- Hero Header -->
+      <div class="page-header">
+        <div class="header-content">
+          <div class="header-left">
+            <div class="header-icon">
+              <i class="fa-solid fa-building"></i>
+            </div>
+            <div class="header-text">
+              <h1>จัดการห้อง</h1>
+              <p class="subtitle">เลือกอาคารเพื่อดูห้องภายใน</p>
+            </div>
+          </div>
+          <button
+            class="btn-add"
+            @click="router.push('/admin/rooms/createRoom')"
+          >
+            <i class="fa-solid fa-circle-plus"></i>
+            <span>เพิ่มห้องใหม่</span>
+          </button>
+        </div>
       </div>
 
-      <div v-if="buildings.length" class="buildings-grid">
-        <div
-          v-for="building in buildings"
-          :key="building.id"
-          class="building-card"
-          @click="handleBuildingClick(building)"
-        >
-          <div class="building-image">
-            <img
-              :src="building.image_url || '/default-building.jpg'"
-              :alt="building.name"
-            />
-          </div>
-          <div class="building-info">
-            <h3>{{ building.name }}</h3>
-            <div class="building-stats">
-              <span class="room-count">
+      <div class="container">
+        <div v-if="buildings.length" class="buildings-grid">
+          <div
+            v-for="building in buildings"
+            :key="building.id"
+            class="building-card"
+            @click="handleBuildingClick(building)"
+          >
+            <div class="building-image">
+              <img
+                :src="building.image_url || '/images/default-picture.png'"
+                :alt="building.name"
+              />
+              <div class="image-overlay">
+                <i class="fa-solid fa-arrow-right"></i>
+              </div>
+            </div>
+            <div class="building-content">
+              <h3>{{ building.name }}</h3>
+              <div class="room-count">
                 <i class="fa-solid fa-door-open"></i>
-                {{ building.rooms?.length || 0 }} ห้อง
-              </span>
+                <span>{{ building.rooms?.length || 0 }} ห้อง</span>
+              </div>
             </div>
           </div>
         </div>
+        <div v-else class="empty-state">
+          <i class="fa-solid fa-building-slash"></i>
+          <h3>ยังไม่มีอาคารในระบบ</h3>
+          <p>กรุณาเพิ่มอาคารก่อนเพื่อจัดการห้อง</p>
+        </div>
       </div>
-      <div v-else>ไม่มีอาคารในระบบ</div>
     </div>
 
     <!-- แสดงห้องในอาคาร -->
     <div v-else>
-      <div class="header-row">
-        <div class="breadcrumb">
-          <button @click="goBackToBuildings" class="back-button">
-            <i class="fa-solid fa-arrow-left"></i> กลับไปยังรายการอาคาร
+      <!-- Header with Back Button -->
+      <div class="page-header rooms-header">
+        <div class="header-content">
+          <div class="header-left">
+            <button @click="goBackToBuildings" class="btn-back">
+              <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <div class="header-icon">
+              <i class="fa-solid fa-door-open"></i>
+            </div>
+            <div class="header-text">
+              <h1>ห้องใน {{ selectedBuilding.name }}</h1>
+              <p class="subtitle">จำนวนห้องทั้งหมด: {{ total }} ห้อง</p>
+            </div>
+          </div>
+          <button
+            class="btn-add"
+            @click="router.push('/admin/rooms/createRoom')"
+          >
+            <i class="fa-solid fa-circle-plus"></i>
+            <span>เพิ่มห้องใหม่</span>
           </button>
-          <h1>
-            <i class="fa-solid fa-door-open"></i>
-            ห้องใน {{ selectedBuilding.name }}
-          </h1>
         </div>
-        <button
-          class="btn-create"
-          @click="router.push('/admin/rooms/createRoom')"
-        >
-          <i class="fa-solid fa-circle-plus"></i> เพิ่มห้อง
-        </button>
       </div>
 
-      <table
-        class="table table-bordered table-striped"
-        v-if="paginatedRooms.length"
-      >
-        <thead>
-          <tr>
-            <th>รูปภาพ</th>
-            <th>ชื่อห้อง</th>
-            <th>จำนวนที่เข้าประชุมได้</th>
-            <th>คำอธิบาย</th>
-            <th>เวลาเปิด</th>
-            <th>เวลาปิด</th>
-            <th>สถานะห้อง</th>
-            <th>ปรับปรุงห้อง</th>
-            <th>คาดว่าจะเสร็จ(ชม. นาที)</th>
-            <th>จัดการ</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="(room, idx) in paginatedRooms"
-            :key="room.id"
-            class="room-cell"
-            :class="{ 'alt-row': paginatedRooms.length > 2 && idx % 2 === 1 }"
+      <div class="container">
+        <div v-if="paginatedRooms.length" class="rooms-table-wrapper">
+          <table class="rooms-table">
+            <thead>
+              <tr>
+                <th><i class="fa-solid fa-image"></i> รูปภาพ</th>
+                <th><i class="fa-solid fa-door-open"></i> ชื่อห้อง</th>
+                <th><i class="fa-solid fa-users"></i> จำนวนที่นั่ง</th>
+                <th><i class="fa-solid fa-align-left"></i> คำอธิบาย</th>
+                <th><i class="fa-solid fa-clock"></i> เวลาเปิด</th>
+                <th><i class="fa-solid fa-clock"></i> เวลาปิด</th>
+                <th><i class="fa-solid fa-circle-check"></i> สถานะ</th>
+                <th><i class="fa-solid fa-wrench"></i> บันทึกซ่อมบำรุง</th>
+                <th><i class="fa-solid fa-hourglass-half"></i> เวลาซ่อม</th>
+                <th><i class="fa-solid fa-cog"></i> จัดการ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="room in paginatedRooms" :key="room.id">
+                <td class="img-cell">
+                  <img
+                    :src="room.image_url || '/images/default-picture.png'"
+                    alt="room"
+                  />
+                </td>
+                <td class="room-name">{{ room.name }}</td>
+                <td class="capacity">{{ room.capacity }} คน</td>
+                <td class="description">{{ room.description || "-" }}</td>
+                <td>{{ secondsToHHMM(room.start_room) }}</td>
+                <td>{{ secondsToHHMM(room.end_room) }}</td>
+                <td>
+                  <span
+                    class="status-badge"
+                    :class="
+                      isAvailable(room.is_available)
+                        ? 'available'
+                        : 'unavailable'
+                    "
+                  >
+                    <i
+                      :class="
+                        isAvailable(room.is_available)
+                          ? 'fa-solid fa-circle-check'
+                          : 'fa-solid fa-circle-xmark'
+                      "
+                    ></i>
+                    {{
+                      isAvailable(room.is_available)
+                        ? "พร้อมใช้งาน"
+                        : "ไม่พร้อมใช้งาน"
+                    }}
+                  </span>
+                </td>
+                <td class="maintenance">
+                  {{ orBlank(room.maintenance_note) || "-" }}
+                </td>
+                <td class="eta">{{ orBlank(room.maintenance_eta) || "-" }}</td>
+                <td class="actions">
+                  <button class="btn-detail" @click="goTodetail(room.id)">
+                    <i class="fa-solid fa-eye"></i>
+                    <span>ดูข้อมูล</span>
+                  </button>
+                  <button class="btn-delete" @click="handleDeleteRoom(room)">
+                    <i class="fa-solid fa-trash-can"></i>
+                    <span>ลบ</span>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div v-else class="empty-state">
+          <i class="fa-solid fa-door-closed"></i>
+          <h3>ยังไม่มีห้องในอาคารนี้</h3>
+          <p>เพิ่มห้องแรกของคุณเลย</p>
+          <button
+            class="btn-add-empty"
+            @click="router.push('/admin/rooms/createRoom')"
           >
-            <td>
-              <img :src="room.image_url" alt="room" width="100" height="100" />
-            </td>
-            <td>{{ room.name }}</td>
-            <td>{{ room.capacity }}</td>
-            <td>{{ room.description }}</td>
-            <td>{{ secondsToHHMM(room.start_room) }}</td>
-            <td>{{ secondsToHHMM(room.end_room) }}</td>
-            <td>
-              <span
-                class="status-pill"
-                :class="
-                  isAvailable(room.is_available) ? 'available' : 'unavailable'
-                "
-              >
-                <span
-                  class="status-dot"
-                  :class="isAvailable(room.is_available) ? 'green' : 'red'"
-                ></span>
-                {{
-                  isAvailable(room.is_available)
-                    ? "พร้อมใช้งาน"
-                    : "ไม่พร้อมใช้งาน"
-                }}
-              </span>
-            </td>
-            <td>{{ orBlank(room.maintenance_note) }}</td>
-            <td>{{ orBlank(room.maintenance_eta) }}</td>
-            <td>
-              <button class="btn-detail" @click="goTodetail(room.id)">
-                <i class="fa-solid fa-info"></i> ดูข้อมูล
-              </button>
-              <button class="btn-cancel" @click="handleDeleteRoom(room)">
-                <i class="fa-solid fa-trash-can"></i> ลบ
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-      <div v-else>ไม่มีห้องในอาคารนี้</div>
+            <i class="fa-solid fa-circle-plus"></i>
+            <span>เพิ่มห้องใหม่</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -368,374 +414,588 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.container {
-  padding: 40px 30px;
-  margin: 30px auto;
-  max-width: 1400px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  padding-bottom: 80px;
-  min-height: 400px;
-  overflow-y: auto;
-  background: #ffffff;
-  border-radius: 12px;
-  border: 1px solid #e0e0e0;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
+/* Page Container */
+.page-container {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding: 100px 20px 80px 20px;
 }
 
-.header-row {
+/* Page Header */
+.page-header {
+  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+  padding: 32px 40px;
+  margin: 0 auto 32px auto;
+  max-width: 1400px;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.header-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 2px solid #e0e0e0;
+  gap: 24px;
 }
 
-.breadcrumb {
+.header-left {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 20px;
 }
 
-.back-button {
-  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
-  color: #f5f5f5;
-  padding: 10px 20px;
-  border: none;
-  border-radius: 8px;
+.btn-back {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
   cursor: pointer;
-  transition: all 0.3s;
+  transition: all 0.3s ease;
+}
+
+.btn-back:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateX(-4px);
+}
+
+.header-icon {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border-radius: 16px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  justify-content: center;
+  font-size: 32px;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
 }
 
-.back-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
-}
-
-.header-row h1 {
+.header-text h1 {
   margin: 0;
   font-size: 28px;
-  color: #2d2d2d;
   font-weight: 700;
+  color: #ffffff;
+  line-height: 1.2;
 }
 
-/* Building Grid Styles */
+.subtitle {
+  color: #cbd5e0;
+  font-size: 14px;
+  margin: 8px 0 0 0;
+}
+
+.btn-add {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: #ffffff;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+}
+
+.btn-add:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(251, 191, 36, 0.4);
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+}
+
+/* Container */
+.container {
+  margin: 0 auto;
+  max-width: 1400px;
+  padding: 0;
+}
+
+/* Buildings Grid */
 .buildings-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 25px;
-  margin-bottom: 30px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
 }
 
 .building-card {
   background: #ffffff;
   border-radius: 16px;
-  padding: 0;
+  overflow: hidden;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 2px solid #e0e0e0;
   cursor: pointer;
   transition: all 0.3s ease;
-  border: 1px solid #e0e0e0;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  position: relative;
 }
 
 .building-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-color: #fbbf24;
 }
 
 .building-image {
+  position: relative;
   width: 100%;
-  height: 220px;
+  height: 200px;
   overflow: hidden;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
 }
 
 .building-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
+  transition: transform 0.3s ease;
 }
 
-.building-info {
+.building-card:hover .building-image img {
+  transform: scale(1.05);
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.building-card:hover .image-overlay {
+  opacity: 1;
+}
+
+.image-overlay i {
+  font-size: 48px;
+  color: white;
+  animation: slideRight 0.6s ease infinite alternate;
+}
+
+@keyframes slideRight {
+  from {
+    transform: translateX(-8px);
+  }
+  to {
+    transform: translateX(8px);
+  }
+}
+
+.building-content {
   padding: 20px;
 }
 
-.building-info h3 {
+.building-content h3 {
   margin: 0 0 12px 0;
-  color: #2d2d2d;
-  font-size: 1.4rem;
+  font-size: 20px;
   font-weight: 700;
-}
-
-.building-info p {
-  margin: 0 0 16px 0;
-  color: #555;
-  line-height: 1.6;
-  font-size: 0.95rem;
-}
-
-.building-stats {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
+  color: #2d2d2d;
 }
 
 .room-count {
-  color: #2d2d2d;
-  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 1rem;
+  font-size: 16px;
+  font-weight: 600;
+  color: #6b7280;
 }
 
-/* Room Table Styles */
-.room-cell {
-  text-align: center;
-  vertical-align: middle;
+.room-count i {
+  color: #fbbf24;
+  font-size: 18px;
 }
 
-.table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  border-radius: 8px;
+/* Rooms Table */
+.rooms-table-wrapper {
+  background: white;
+  border-radius: 16px;
   overflow: hidden;
-  background-color: #ffffff;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 2px solid #e0e0e0;
 }
 
-th,
-td {
-  padding: 14px 12px;
-  vertical-align: middle;
-  border-bottom: 1px solid #e0e0e0;
-  font-weight: 500;
+.rooms-table {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-th {
-  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
-  color: #f5f5f5;
+.rooms-table thead {
+  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+}
+
+.rooms-table th {
+  padding: 16px 12px;
+  text-align: left;
   font-weight: 600;
-}
-
-tr:hover {
-  background-color: #f8f9fa;
-}
-
-.alt-row {
-  background-color: #f8f9fa !important;
-}
-
-img {
-  border-radius: 8px;
-  object-fit: cover;
-}
-
-td:last-child {
+  font-size: 14px;
+  color: white;
   white-space: nowrap;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: center;
-  align-items: center;
 }
 
-/* Availability status styles */
-.status-pill {
+.rooms-table th i {
+  margin-right: 6px;
+  color: #fbbf24;
+}
+
+.rooms-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.2s ease;
+}
+
+.rooms-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.rooms-table td {
+  padding: 16px 12px;
+  vertical-align: middle !important;
+  color: #374151;
+  font-size: 14px;
+  height: 100%;
+}
+
+.img-cell {
+  width: 120px;
+}
+
+.img-cell img {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 12px;
+  border: 2px solid #e0e0e0;
+}
+
+.room-name {
+  font-weight: 600;
+  color: #2d2d2d;
+  font-size: 15px;
+}
+
+.capacity {
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.description {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #6b7280;
+}
+
+.maintenance,
+.eta {
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.status-badge {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
+  padding: 6px 12px;
+  border-radius: 20px;
   font-weight: 600;
-  font-size: 12px;
-  color: #fff;
-}
-.status-pill.available {
-  background: #28a745;
-}
-.status-pill.unavailable {
-  background: #dc3545;
-}
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
-}
-.status-dot.green {
-  color: #d4edda;
-  background: #d4edda;
-}
-.status-dot.red {
-  color: #f8d7da;
-  background: #f8d7da;
+  font-size: 13px;
+  white-space: nowrap;
 }
 
-button {
-  padding: 5px 10px;
+.status-badge.available {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+}
+
+.status-badge.unavailable {
+  background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.actions {
+  display: table-cell;
+  vertical-align: middle;
+}
+
+.actions > button {
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+
+/* Action Buttons */
+.btn-detail,
+.btn-delete {
   border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 14px;
-  color: white;
-  font-weight: bold;
-}
-
-h1 {
-  text-decoration: none;
-}
-
-.btn-create {
-  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
-  color: #f5f5f5;
-  border: none;
-  padding: 12px 24px;
-  cursor: pointer;
+  padding: 8px 14px;
   border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  font-size: 16px;
-  font-weight: 600;
-  gap: 8px;
-  transition: all 0.3s;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.btn-create:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
-  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
+  gap: 6px;
+  transition: all 0.3s ease;
+  white-space: nowrap;
 }
 
 .btn-detail {
-  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
-  color: #f5f5f5;
-  border: none;
-  padding: 8px 16px;
-  margin-top: 30px;
-  border-radius: 8px;
+  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+  color: white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .btn-detail:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
 }
 
-.btn-cancel {
+.btn-delete {
   background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
   color: white;
-  border: none;
-  padding: 8px 16px;
-  margin-left: 10px;
-  margin-top: 30px;
-  border-radius: 8px;
   box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
 }
 
-.btn-cancel:hover {
+.btn-delete:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
-  background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
 }
 
+/* Empty State */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 2px dashed #e0e0e0;
+}
+
+.empty-state i {
+  font-size: 80px;
+  color: #e5e7eb;
+  margin-bottom: 20px;
+}
+
+.empty-state h3 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  color: #374151;
+}
+
+.empty-state p {
+  margin: 0 0 24px 0;
+  font-size: 16px;
+  color: #6b7280;
+}
+
+.btn-add-empty {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+  transition: all 0.3s ease;
+}
+
+.btn-add-empty:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(251, 191, 36, 0.4);
+}
+
+/* Pagination */
 .pagination-bar {
   position: fixed;
   left: 0;
   bottom: 0;
   width: 100%;
-  background: #fafafa;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.05);
-  justify-content: center;
-  text-align: center;
+  background: white;
+  border-top: 2px solid #e0e0e0;
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.08);
+  padding: 16px 20px;
   z-index: 100;
   display: flex;
-  padding: 12px 0;
+  justify-content: center;
 }
 
 .pagination {
   display: flex;
-  justify-content: center;
   align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
-  gap: 5px;
 }
 
 .pagination button {
-  padding: 8px 14px;
+  padding: 10px 16px;
+  border: 2px solid #e0e0e0;
+  background: white;
+  color: #374151;
+  border-radius: 8px;
   font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
-  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
-  color: #f5f5f5;
-  border: none;
-  border-radius: 6px;
   transition: all 0.2s ease;
-  font-weight: 500;
 }
 
 .pagination button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
+  background: #f8f9fa;
+  border-color: #fbbf24;
   transform: translateY(-1px);
 }
 
 .pagination button:disabled {
-  background-color: #e0e0e0;
-  color: #999;
+  opacity: 0.5;
   cursor: not-allowed;
-  opacity: 0.6;
 }
 
 .pagination button.active {
-  background: #f5f5f5;
-  color: #2d2d2d;
-  font-weight: 600;
-  border: 2px solid #2d2d2d;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  border-color: #fbbf24;
 }
 
 .page-jump {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-left: 10px;
+  gap: 8px;
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 2px solid #e0e0e0;
+}
+
+.page-jump label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #6b7280;
 }
 
 .page-jump input {
-  width: 50px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid #ccc;
+  width: 60px;
+  padding: 8px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
   text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.page-jump input:focus {
+  outline: none;
+  border-color: #fbbf24;
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+  .buildings-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+
+  .rooms-table-wrapper {
+    overflow-x: auto;
+  }
+}
+
 @media (max-width: 768px) {
+  .page-container {
+    padding: 100px 12px 80px 12px;
+  }
+
+  .page-header {
+    padding: 24px 20px;
+  }
+
+  .header-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .header-icon {
+    width: 56px;
+    height: 56px;
+    font-size: 28px;
+  }
+
+  .header-text h1 {
+    font-size: 24px;
+  }
+
   .buildings-grid {
     grid-template-columns: 1fr;
   }
 
-  .header-row {
-    flex-direction: column;
-    gap: 15px;
-    align-items: flex-start;
+  .btn-add {
+    width: 100%;
+    justify-content: center;
   }
 
-  .breadcrumb {
+  .rooms-table th,
+  .rooms-table td {
+    padding: 12px 8px;
+    font-size: 12px;
+  }
+
+  .img-cell img {
+    width: 80px;
+    height: 80px;
+  }
+
+  .actions {
     flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
+  }
+
+  .btn-detail,
+  .btn-delete {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pagination {
+    gap: 4px;
+  }
+
+  .pagination button {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .page-jump {
+    margin-left: 0;
+    padding-left: 0;
+    border-left: none;
+    margin-top: 8px;
+    width: 100%;
   }
 }
 </style>

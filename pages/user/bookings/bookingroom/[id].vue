@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import LoadingPage from "@/components/Loading.vue";
 import FullCalendar from "@fullcalendar/vue3";
 import dayGridPlugin from "@fullcalendar/daygrid";
@@ -49,6 +49,8 @@ const selectedEvent = ref(null);
 const selectedEventEquipments = ref([]);
 const searchDate = ref(null);
 const loading = ref(false);
+const isRefreshing = ref(false); // สถานะการรีเฟรชแบบเงียบ
+let refreshInterval = null; // เก็บ interval สำหรับ auto-refresh
 
 onMounted(async () => {
   await buildingStore.fetchBuildings();
@@ -62,13 +64,31 @@ onMounted(async () => {
       selectedBuildingId.value = found.id;
       selectedRoomId.value = roomId.value;
     }
-    await loadBookings();
+    await loadBookings(); // โหลดครั้งแรก (แสดง loading)
+
+    // 🔥 เริ่ม Auto-refresh ทุก 2 วินาที (แบบเงียบ ไม่แสดง loading)
+    refreshInterval = setInterval(async () => {
+      await loadBookings(true); // silent mode
+    }, 2000);
   }
 });
 
-const loadBookings = async () => {
+// 🧹 ทำความสะอาด interval เมื่อออกจากหน้า
+onBeforeUnmount(() => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval);
+    refreshInterval = null;
+  }
+});
+
+const loadBookings = async (silent = false) => {
   if (!roomId.value) return;
-  loading.value = true;
+
+  if (silent) {
+    isRefreshing.value = true;
+  } else {
+    loading.value = true;
+  }
 
   try {
     await bookingStore.fetchBookingByRoomId(roomId.value);
@@ -115,7 +135,11 @@ const loadBookings = async () => {
   } catch (error) {
     console.error("เกิดข้อผิดพลาดในการโหลดข้อมูลการจอง:", error);
   } finally {
-    loading.value = false;
+    if (silent) {
+      isRefreshing.value = false;
+    } else {
+      loading.value = false;
+    }
   }
 };
 
@@ -387,7 +411,7 @@ const calendarOptions = computed(() => ({
 
 <template>
   <teleport to="body">
-    <LoadingPage v-if="isLoading" />
+    <LoadingPage v-if="isLoading && !isRefreshing" />
   </teleport>
   <div class="app-container">
     <div class="main-content">
@@ -857,6 +881,7 @@ h2 {
   overflow: hidden;
   border: 2px solid #e0e0e0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
 }
 
 .calendar-footer {
@@ -1028,7 +1053,8 @@ h2 {
 
 .today-bookings tbody tr,
 .all-bookings tbody tr {
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  animation: fadeIn 0.3s ease-in-out;
 }
 
 .today-bookings tbody tr:hover,
@@ -1042,7 +1068,6 @@ h2 {
   padding: 24px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   border: 2px solid #e0e0e0;
-  font-size: 13px;
   width: 100%;
 }
 
@@ -1052,8 +1077,16 @@ h2 {
   padding: 24px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   border: 2px solid #e0e0e0;
-  font-size: 13px;
   width: 100%;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .row-even {
@@ -1076,6 +1109,7 @@ h2 {
   font-weight: 600;
   text-transform: uppercase;
   display: inline-block;
+  transition: all 0.3s ease;
 }
 
 .status-approved {
@@ -1409,6 +1443,7 @@ h2 {
   overflow: hidden !important;
   box-sizing: border-box !important;
   padding: 0 !important;
+  transition: all 0.3s ease !important;
 }
 
 ::v-deep(.event-time-title) {

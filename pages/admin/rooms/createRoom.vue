@@ -238,326 +238,514 @@ const handleCreate = async () => {
   <teleport to="body">
     <LoadingPage v-if="isLoading" />
   </teleport>
-  <div class="container">
-    <button @click="$router.back()" class="back-button">
-      <i class="fas fa-arrow-left"></i> กลับ
-    </button>
 
-    <div class="form-wrapper">
-      <div class="image-section">
-        <img
-          :src="Room.image_url || '/images/default-picture.png'"
-          alt="Room Image"
-          class="image-preview"
-        />
-        <div class="input-image">
-          <input
-            id="fileInput"
-            type="file"
-            @change="handleImageUpload"
-            accept="image/*"
-            class="file-hidden"
-          />
-          <label for="fileInput" class="upload-button">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke-width="1.5"
-              stroke="currentColor"
-              class="svg-icon"
-              width="20"
-              height="20"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-              />
-            </svg>
-            เพิ่มรูป
-          </label>
+  <div class="page-container">
+    <!-- Hero Header -->
+    <div class="page-header">
+      <div class="header-content">
+        <div class="header-left">
+          <button @click="$router.back()" class="btn-back">
+            <i class="fa-solid fa-arrow-left"></i>
+          </button>
+          <div class="header-icon">
+            <i class="fa-solid fa-door-open"></i>
+          </div>
+          <div class="header-text">
+            <h1>เพิ่มห้องใหม่</h1>
+            <p class="subtitle">กรอกข้อมูลห้องประชุมใหม่</p>
+          </div>
         </div>
       </div>
+    </div>
 
-      <div class="form-section">
-        <div class="form-group">
-          <label>ชื่อห้อง:</label>
-          <input type="text" v-model="Room.name" placeholder="ชื่อห้อง" />
+    <div class="container">
+      <div class="form-card">
+        <div class="form-layout">
+          <!-- Image Section -->
+          <div class="image-section">
+            <div class="image-upload-area">
+              <div class="image-preview-wrapper">
+                <img
+                  :src="Room.image_url || '/images/default-picture.png'"
+                  alt="Room Image"
+                  class="image-preview"
+                />
+              </div>
+              <input
+                id="fileInput"
+                type="file"
+                @change="handleImageUpload"
+                accept="image/*"
+                class="file-input"
+              />
+              <label for="fileInput" class="upload-btn">
+                <i class="fa-solid fa-cloud-arrow-up"></i>
+                <span>อัพโหลดรูปภาพ</span>
+              </label>
+              <p class="upload-hint">รองรับไฟล์: JPG, PNG (สูงสุด 5MB)</p>
+            </div>
+          </div>
+
+          <!-- Form Section -->
+          <div class="form-section">
+            <div class="form-row">
+              <div class="form-group">
+                <label>
+                  <i class="fa-solid fa-door-open"></i>
+                  ชื่อห้อง
+                </label>
+                <input
+                  type="text"
+                  v-model="Room.name"
+                  placeholder="กรอกชื่อห้อง"
+                  class="form-input"
+                />
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <i class="fa-solid fa-tag"></i>
+                  ประเภทห้อง
+                </label>
+                <select v-model="Room.room_type_id" class="form-select">
+                  <option disabled value="">-- เลือกประเภทห้อง --</option>
+                  <option v-for="rt in roomTypes" :key="rt.id" :value="rt.id">
+                    {{ rt.name || rt.type || rt.id }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>
+                  <i class="fa-solid fa-building"></i>
+                  อาคาร
+                </label>
+                <select v-model="Room.building_id" class="form-select">
+                  <option disabled value="">-- เลือกอาคาร --</option>
+                  <option
+                    v-for="building in buildings"
+                    :key="building.id"
+                    :value="building.id"
+                  >
+                    {{ building.name }}
+                  </option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <i class="fa-solid fa-users"></i>
+                  จำนวนที่นั่ง
+                </label>
+                <input
+                  type="number"
+                  v-model="Room.capacity"
+                  min="1"
+                  class="form-input"
+                  placeholder="จำนวนคน"
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>
+                  <i class="fa-solid fa-clock"></i>
+                  เวลาเปิดห้อง
+                </label>
+                <input
+                  type="time"
+                  v-model="Room.start_time_str"
+                  class="form-input"
+                />
+              </div>
+
+              <div class="form-group">
+                <label>
+                  <i class="fa-solid fa-clock"></i>
+                  เวลาปิดห้อง
+                </label>
+                <input
+                  type="time"
+                  v-model="Room.end_time_str"
+                  class="form-input"
+                />
+              </div>
+            </div>
+
+            <div class="form-group full-width">
+              <label>
+                <i class="fa-solid fa-align-left"></i>
+                รายละเอียด
+              </label>
+              <textarea
+                v-model="Room.description"
+                placeholder="กรอกรายละเอียดห้องประชุม"
+                class="form-textarea"
+                rows="4"
+              ></textarea>
+            </div>
+
+            <div class="form-actions">
+              <button @click="$router.back()" class="btn-cancel">
+                <i class="fa-solid fa-xmark"></i>
+                <span>ยกเลิก</span>
+              </button>
+              <button @click="handleCreate" class="btn-submit">
+                <i class="fa-solid fa-check"></i>
+                <span>สร้างห้อง</span>
+              </button>
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label>ประเภทห้อง:</label>
-          <select v-model="Room.room_type_id">
-            <option disabled value="">-- เลือกประเภทห้อง --</option>
-            <option v-for="rt in roomTypes" :key="rt.id" :value="rt.id">
-              {{ rt.name || rt.type || rt.id }}
-            </option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>อาคาร:</label>
-          <select v-model="Room.building_id">
-            <option disabled value="">-- เลือกอาคาร --</option>
-            <option
-              v-for="building in buildings"
-              :key="building.id"
-              :value="building.id"
-            >
-              {{ building.name }}
-            </option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>เวลาเปิดห้อง (เช่น 08:00):</label>
-          <input type="time" v-model="Room.start_time_str" />
-        </div>
-        <div class="form-group">
-          <label>เวลาปิดห้อง (เช่น 18:00):</label>
-          <input type="time" v-model="Room.end_time_str" />
-        </div>
-        <div class="form-group">
-          <label>จำนวนคนที่เข้าประชุมได้:</label>
-          <input type="number" v-model="Room.capacity" min="1" />
-        </div>
-        <div class="form-group">
-          <label>รายละเอียดห้องประชุม:</label>
-          <input
-            type="text"
-            v-model="Room.description"
-            placeholder="คำอธิบาย"
-          />
-        </div>
-        <button @click="handleCreate" class="create-room">สร้างห้อง</button>
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-.container {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
+/* Page Container */
+.page-container {
+  min-height: 100vh;
+  background: #f5f5f5;
+  padding: 100px 20px 40px 20px;
+}
+
+/* Page Header */
+.page-header {
+  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+  padding: 32px 40px;
+  margin: 0 auto 32px auto;
   max-width: 1200px;
-  margin: 30px auto;
-  padding: 40px 30px;
-  box-sizing: border-box;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e0e0e0;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
 }
 
-.back-button {
-  align-self: flex-start;
-  margin-bottom: 30px;
-  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
-  border: none;
-  color: #f5f5f5;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border-radius: 8px;
-  transition: all 0.3s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  gap: 20px;
 }
 
-.back-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
-}
-
-.form-wrapper {
+.btn-back {
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 40px;
-  padding: 0;
-  width: 100%;
-  justify-content: flex-start;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
+.btn-back:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateX(-4px);
+}
+
+.header-icon {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+}
+
+.header-text h1 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.subtitle {
+  color: #cbd5e0;
+  font-size: 14px;
+  margin: 8px 0 0 0;
+}
+
+/* Container */
+.container {
+  margin: 0 auto;
+  max-width: 1200px;
+}
+
+/* Form Card */
+.form-card {
+  background: white;
+  border-radius: 16px;
+  padding: 40px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border: 2px solid #e0e0e0;
+}
+
+.form-layout {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 40px;
+}
+
+/* Image Section */
 .image-section {
-  flex: 0 0 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.image-upload-area {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 16px;
+}
+
+.image-preview-wrapper {
+  width: 100%;
+  height: 400px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 3px dashed #e0e0e0;
   background: #f8f9fa;
-  padding: 30px;
-  border-radius: 12px;
-  border: 2px dashed #e0e0e0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .image-preview {
   width: 100%;
-  max-width: 350px;
-  height: 350px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  height: 100%;
   object-fit: cover;
-  border: 1px solid #e0e0e0;
 }
 
-.input-image {
-  margin-top: 20px;
-}
-
-.file-hidden {
+.file-input {
   display: none;
 }
 
-.upload-button {
-  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
-  color: #f5f5f5;
-  padding: 12px 20px;
-  border-radius: 8px;
+.upload-btn {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  padding: 14px 32px;
+  border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  gap: 10px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
 }
 
-.upload-button:hover {
+.upload-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
+  box-shadow: 0 6px 16px rgba(251, 191, 36, 0.4);
 }
 
+.upload-hint {
+  font-size: 13px;
+  color: #9ca3af;
+  text-align: center;
+  margin: 0;
+}
+
+/* Form Section */
 .form-section {
-  flex: 1;
-  min-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  margin-bottom: 24px;
+  gap: 10px;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
 }
 
 .form-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-weight: 600;
-  margin-bottom: 8px;
+  font-size: 15px;
   color: #2d2d2d;
-  font-size: 15px;
 }
 
-input,
-select {
-  padding: 12px 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-size: 15px;
-  width: 100%;
-  box-sizing: border-box;
-  transition: all 0.2s ease;
-  background: #ffffff;
-}
-
-input:focus,
-select:focus {
-  border-color: #2d2d2d;
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(45, 45, 45, 0.1);
-}
-
-input[type="number"] {
-  appearance: textfield;
-  -moz-appearance: textfield;
-}
-
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.create-room {
-  background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
-  color: #f5f5f5;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  padding: 14px 32px;
+.form-group label i {
+  color: #fbbf24;
   font-size: 16px;
-  margin-top: 10px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  width: 100%;
 }
 
-.create-room:hover {
+.form-input,
+.form-select,
+.form-textarea {
+  padding: 14px 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 15px;
+  transition: all 0.2s ease;
+  background: #f8f9fa;
+  font-family: inherit;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #fbbf24;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 24px;
+  border-top: 2px solid #f3f4f6;
+}
+
+.btn-cancel,
+.btn-submit {
+  flex: 1;
+  padding: 14px 28px;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel {
+  background: #e5e7eb;
+  color: #374151;
+  border: 2px solid #d1d5db;
+}
+
+.btn-cancel:hover {
+  background: #d1d5db;
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
-  background: linear-gradient(135deg, #3a3a3a 0%, #4a4a4a 100%);
 }
 
+.btn-submit {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.3);
+}
+
+.btn-submit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(251, 191, 36, 0.4);
+}
+
+/* SweetAlert Customization */
 .my-popup {
   font-size: 17px;
-  border-radius: 14px !important;
-  padding: 1.3em 1.8em !important;
-  animation-duration: 0.5s !important;
+  border-radius: 16px !important;
+  padding: 1.5em 2em !important;
 }
 
 .btn-ok {
-  background-color: #1f2937 !important;
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%) !important;
   color: white !important;
-  font-weight: bold;
-  border-radius: 6px !important;
-  padding: 10px 24px !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+  padding: 12px 28px !important;
   border: none !important;
-  transition: background-color 0.3s ease;
-}
-
-.btn-ok:hover {
-  background-color: #4b5563 !important;
 }
 
 /* Responsive */
 @media (max-width: 1024px) {
-  .form-wrapper {
-    flex-direction: column;
-    gap: 30px;
+  .form-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
   }
 
-  .image-section {
-    flex: 1;
-    width: 100%;
-  }
-
-  .form-section {
-    width: 100%;
-    min-width: 100%;
+  .image-preview-wrapper {
+    height: 300px;
   }
 }
 
 @media (max-width: 768px) {
-  .container {
-    padding: 30px 20px;
-    margin: 20px;
+  .page-container {
+    padding: 100px 12px 40px 12px;
   }
 
-  .image-section {
-    padding: 20px;
+  .page-header {
+    padding: 24px 20px;
   }
 
-  .image-preview {
-    max-width: 100%;
+  .header-left {
+    gap: 12px;
+  }
+
+  .header-icon {
+    width: 56px;
+    height: 56px;
+    font-size: 28px;
+  }
+
+  .header-text h1 {
+    font-size: 24px;
+  }
+
+  .form-card {
+    padding: 24px 20px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .image-preview-wrapper {
     height: 250px;
   }
 
-  input,
-  select {
-    font-size: 14px;
+  .form-actions {
+    flex-direction: column;
+  }
+
+  .btn-cancel,
+  .btn-submit {
+    width: 100%;
   }
 }
 </style>
