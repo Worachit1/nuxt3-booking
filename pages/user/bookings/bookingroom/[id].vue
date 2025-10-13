@@ -223,7 +223,7 @@ const todayBookings = computed(() => {
 
 // Pagination for today's bookings
 const todayPage = ref(1);
-const todayPageSize = 10;
+const todayPageSize = 5; // จำกัดแสดง 5 แถว
 const todayTotalPages = computed(() =>
   Math.max(1, Math.ceil(todayBookings.value.length / todayPageSize))
 );
@@ -234,6 +234,65 @@ const todayPageItems = computed(() => {
 watch(todayBookings, () => {
   if (todayPage.value > todayTotalPages.value) todayPage.value = 1;
 });
+
+// 🔥 Modal สำหรับดูรายละเอียด
+const showDetailModal = ref(false);
+const selectedDetail = ref(null);
+const selectedDetailEquipments = ref([]);
+
+async function openDetailModal(event) {
+  console.log("Opening detail modal for event:", event);
+  selectedDetail.value = event;
+  selectedDetailEquipments.value = [];
+  
+  try {
+    // โหลดอุปกรณ์ถ้ามีการจอง
+    if (event.id) {
+      await equipmentBookingStore.fetchByBookingId(event.id);
+      const equipmentBookings = equipmentBookingStore.equipmentBookings || [];
+      
+      const equipmentIds = [
+        ...new Set(
+          equipmentBookings
+            .filter((eb) => eb.booking_id === event.id)
+            .map((eb) => eb.equipment_id)
+        ),
+      ];
+
+      if (equipmentIds.length > 0) {
+        await equipmentStore.fetchEquipments();
+        selectedDetailEquipments.value = equipmentIds.map((eqId) => {
+          const eq = equipmentStore.equipments.find((e) => e.id === eqId);
+          const ebItem = equipmentBookings.find(
+            (eb) => eb.booking_id === event.id && eb.equipment_id === eqId
+          );
+          return {
+            id: eq?.id,
+            name: eq?.name,
+            image_url: eq?.image_url,
+            quantity: ebItem?.quantity || 0,
+          };
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Error loading equipment:", error);
+  }
+  
+  showDetailModal.value = true;
+}
+
+function closeDetailModal() {
+  showDetailModal.value = false;
+  selectedDetail.value = null;
+  selectedDetailEquipments.value = [];
+}
+
+// ฟังก์ชันย่อข้อความ
+function truncateText(text, maxLength = 20) {
+  if (!text) return "-";
+  return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
+}
 
 const dailyBookings = computed(() => {
   const grouped = {};
@@ -259,7 +318,7 @@ const allApprovedBookings = computed(() =>
     .sort((a, b) => (a.start || 0) - (b.start || 0))
 );
 const allPage = ref(1);
-const allPageSize = 10;
+const allPageSize = 5; // จำกัดแสดง 5 แถว
 const allTotalPages = computed(() =>
   Math.max(1, Math.ceil(allApprovedBookings.value.length / allPageSize))
 );
@@ -515,12 +574,9 @@ const calendarOptions = computed(() => ({
               <thead>
                 <tr class="header-row">
                   <th>หัวข้อ</th>
-                  <th>รายละเอียด</th>
-                  <th>เริ่ม</th>
-                  <th>สิ้นสุด</th>
                   <th>ผู้จอง</th>
                   <th>ห้องที่จอง</th>
-                  <th>สถานะ</th>
+                  <th>ดูรายละเอียด</th>
                 </tr>
               </thead>
               <tbody>
@@ -533,30 +589,12 @@ const calendarOptions = computed(() => ({
                   ]"
                 >
                   <td>{{ event.title }}</td>
-                  <td>{{ event.description }}</td>
-                  <td>{{ formatDateTime(event.start) }}</td>
-                  <td>{{ formatDateTime(event.end) }}</td>
                   <td>{{ event.first_name }} {{ event.last_name }}</td>
                   <td>{{ event.room_name }}</td>
-                  <td>
-                    <span
-                      :class="[
-                        'status-badge',
-                        event.status === 'Approved' ? 'status-approved' : '',
-                        event.status === 'Pending' ? 'status-pending' : '',
-                        event.status === 'Finished' ? 'status-finished' : '',
-                      ]"
-                    >
-                      {{
-                        event.status === "Approved"
-                          ? "อนุมัติ"
-                          : event.status === "Pending"
-                          ? "รอการอนุมัติ"
-                          : event.status === "Finished"
-                          ? "เสร็จสิ้น"
-                          : event.status
-                      }}
-                    </span>
+                  <td @click.stop="openDetailModal(event)" style="cursor: pointer;">
+                    <button class="detail-btn" @click.stop="openDetailModal(event)">
+                      <i class="fa-solid fa-eye"></i> ดูเพิ่มเติม
+                    </button>
                   </td>
                 </tr>
               </tbody>
@@ -598,11 +636,9 @@ const calendarOptions = computed(() => ({
                 <tr class="header-row">
                   <th>วันที่</th>
                   <th>หัวข้อ</th>
-                  <th>รายละเอียด</th>
-                  <th>เริ่ม</th>
-                  <th>สิ้นสุด</th>
                   <th>ผู้จอง</th>
                   <th>ห้องที่จอง</th>
+                  <th>ดูรายละเอียด</th>
                 </tr>
               </thead>
               <tbody>
@@ -612,14 +648,16 @@ const calendarOptions = computed(() => ({
                   :class="[index % 2 === 0 ? 'row-even' : 'row-odd']"
                 >
                   <td>
-                    {{ dayjs(event.start).locale("th").format("D MMMM YYYY") }}
+                    {{ dayjs(event.start).locale("th").format("D MMM YY") }}
                   </td>
                   <td>{{ event.title }}</td>
-                  <td>{{ event.description }}</td>
-                  <td>{{ formatDateTime(event.start) }}</td>
-                  <td>{{ formatDateTime(event.end) }}</td>
                   <td>{{ event.first_name }} {{ event.last_name }}</td>
                   <td>{{ event.room_name }}</td>
+                  <td @click.stop="openDetailModal(event)" style="cursor: pointer;">
+                    <button class="detail-btn" @click.stop="openDetailModal(event)">
+                      <i class="fa-solid fa-eye"></i> ดูเพิ่มเติม
+                    </button>
+                  </td>
                 </tr>
               </tbody>
             </table>
@@ -787,6 +825,128 @@ const calendarOptions = computed(() => ({
         </div>
       </div>
     </teleport>
+
+    <!-- 🔥 Modal ดูรายละเอียดเต็ม -->
+    <teleport to="body">
+      <div v-if="showDetailModal" class="popup-wrapper">
+        <div class="popup-content detail-modal">
+          <div class="popup-header">
+            <i class="fa-solid fa-file-lines" style="color: #fbbf24"></i>
+            รายละเอียดการจอง
+          </div>
+          <div class="popup-body">
+            <div class="detail-grid">
+              <div class="detail-item full-width">
+                <strong><i class="fa-solid fa-heading"></i> หัวข้อ:</strong>
+                <span class="large-text">{{ selectedDetail?.title }}</span>
+              </div>
+              <div class="detail-item full-width">
+                <strong><i class="fa-solid fa-align-left"></i> รายละเอียด:</strong>
+                <span>{{ selectedDetail?.description || "-" }}</span>
+              </div>
+              <div class="detail-item">
+                <strong><i class="fa-solid fa-calendar"></i> วันที่:</strong>
+                <span>{{
+                  dayjs(selectedDetail?.start).locale("th").format("D MMMM YYYY")
+                }}</span>
+              </div>
+              <div class="detail-item">
+                <strong><i class="fa-solid fa-clock"></i> เวลา:</strong>
+                <span>
+                  {{ dayjs(selectedDetail?.start).format("HH:mm") }} - 
+                  {{ dayjs(selectedDetail?.end).format("HH:mm") }} น.
+                </span>
+              </div>
+              <div class="detail-item">
+                <strong><i class="fa-solid fa-user"></i> ผู้จอง:</strong>
+                <span>
+                  {{ selectedDetail?.first_name }}
+                  {{ selectedDetail?.last_name }}
+                </span>
+              </div>
+              <div class="detail-item">
+                <strong><i class="fa-solid fa-door-open"></i> ห้องที่จอง:</strong>
+                <span>{{ selectedDetail?.room_name }}</span>
+              </div>
+              <div class="detail-item">
+                <strong><i class="fa-solid fa-info-circle"></i> สถานะ:</strong>
+                <span
+                  :class="[
+                    'status-badge',
+                    selectedDetail?.status === 'Approved'
+                      ? 'status-approved'
+                      : '',
+                    selectedDetail?.status === 'Pending' ? 'status-pending' : '',
+                    selectedDetail?.status === 'Finished'
+                      ? 'status-finished'
+                      : '',
+                  ]"
+                >
+                  {{
+                    selectedDetail?.status === "Approved"
+                      ? "อนุมัติ"
+                      : selectedDetail?.status === "Pending"
+                      ? "รอการอนุมัติ"
+                      : selectedDetail?.status === "Finished"
+                      ? "เสร็จสิ้น"
+                      : selectedDetail?.status
+                  }}
+                </span>
+              </div>
+              <div class="detail-item">
+                <strong><i class="fa-solid fa-calendar-plus"></i> สร้างเมื่อ:</strong>
+                <span>{{ formatDateTime(selectedDetail?.created_at) }}</span>
+              </div>
+            </div>
+
+            <!-- แสดงอุปกรณ์ที่จอง -->
+            <div
+              v-if="
+                selectedDetail?.status === 'Approved' ||
+                selectedDetail?.status === 'Pending'
+              "
+              class="equipment-section"
+            >
+              <h3><i class="fa-solid fa-toolbox"></i> อุปกรณ์ที่จอง</h3>
+              <div
+                v-if="selectedDetailEquipments.length > 0"
+                class="equipment-list"
+              >
+                <div
+                  v-for="equipment in selectedDetailEquipments"
+                  :key="equipment.id"
+                  class="equipment-item"
+                >
+                  <div class="equipment-image">
+                    <img
+                      :src="
+                        equipment.image_url || '/images/default-picture.png'
+                      "
+                      :alt="equipment.name"
+                      @error="$event.target.src = '/images/default-picture.png'"
+                    />
+                  </div>
+                  <div class="equipment-details">
+                    <span class="equipment-name">{{ equipment.name }}</span>
+                    <span class="equipment-quantity"
+                      >จำนวน: {{ equipment.quantity }}</span
+                    >
+                  </div>
+                </div>
+              </div>
+              <div v-else class="no-equipment">
+                <i class="fa-solid fa-circle-info"></i> ไม่มีการจองอุปกรณ์
+              </div>
+            </div>
+          </div>
+          <div class="popup-footer">
+            <button @click="closeDetailModal" class="close-btn">
+              <i class="fa-solid fa-xmark"></i> ปิด
+            </button>
+          </div>
+        </div>
+      </div>
+    </teleport>
   </div>
 </template>
 
@@ -801,13 +961,13 @@ const calendarOptions = computed(() => ({
 .main-content {
   display: flex;
   flex: 1;
-  min-height: 100vh;
   transition: margin-left 0.5s ease;
   gap: 20px;
   padding: 20px;
-  max-width: 1600px;
+  max-width: 100%;
   margin: 0 auto;
   width: 100%;
+  box-sizing: border-box;
 }
 
 h2 {
@@ -829,16 +989,20 @@ h2 {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   border-radius: 12px;
   border: 2px solid #e0e0e0;
+  height: auto;
+  min-height: fit-content;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .right-content {
   width: 33.333%;
-  max-height: 90vh;
-  overflow-y: auto;
   padding: 0;
   display: flex;
   flex-direction: column;
   gap: 20px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* ปรับขนาด header */
@@ -1032,23 +1196,102 @@ h2 {
 
 .header-row {
   background: linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%);
-  font-weight: 600;
+  font-weight: 700;
   color: #ffffff;
+}
+
+.header-row th {
+  color: #ffffff !important;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 16px 10px;
 }
 
 .today-bookings table,
 .all-bookings table {
   border-collapse: collapse;
   width: 100%;
+  table-layout: auto;
+  min-width: 600px;
 }
 
 .today-bookings th,
 .today-bookings td,
 .all-bookings th,
 .all-bookings td {
-  padding: 12px;
+  padding: 14px 10px;
   text-align: left;
   border: 1px solid #e0e0e0;
+  vertical-align: middle;
+  overflow: visible;
+  word-wrap: break-word;
+  white-space: normal;
+}
+
+.today-bookings td,
+.all-bookings td {
+  color: #2d2d2d;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* กำหนดความกว้างของคอลัมน์ - ตารางวันนี้ (4 คอลัมน์) */
+.today-bookings th:nth-child(1),
+.today-bookings td:nth-child(1) {
+  width: 30%; /* หัวข้อ */
+  min-width: 150px;
+}
+
+.today-bookings th:nth-child(2),
+.today-bookings td:nth-child(2) {
+  width: 25%; /* ผู้จอง */
+  min-width: 120px;
+}
+
+.today-bookings th:nth-child(3),
+.today-bookings td:nth-child(3) {
+  width: 25%; /* ห้องที่จอง */
+  min-width: 120px;
+}
+
+.today-bookings th:nth-child(4),
+.today-bookings td:nth-child(4) {
+  width: 20%; /* ปุ่มดูรายละเอียด */
+  min-width: 140px;
+  text-align: center;
+}
+
+/* สำหรับตารางรวมทั้งหมด (5 คอลัมน์) */
+.all-bookings th:nth-child(1),
+.all-bookings td:nth-child(1) {
+  width: 12%; /* วันที่ */
+  min-width: 90px;
+}
+
+.all-bookings th:nth-child(2),
+.all-bookings td:nth-child(2) {
+  width: 28%; /* หัวข้อ */
+  min-width: 130px;
+}
+
+.all-bookings th:nth-child(3),
+.all-bookings td:nth-child(3) {
+  width: 22%; /* ผู้จอง */
+  min-width: 110px;
+}
+
+.all-bookings th:nth-child(4),
+.all-bookings td:nth-child(4) {
+  width: 22%; /* ห้องที่จอง */
+  min-width: 110px;
+}
+
+.all-bookings th:nth-child(5),
+.all-bookings td:nth-child(5) {
+  width: 16%; /* ปุ่มดูรายละเอียด */
+  min-width: 130px;
+  text-align: center;
 }
 
 .today-bookings tbody tr,
@@ -1069,6 +1312,11 @@ h2 {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   border: 2px solid #e0e0e0;
   width: 100%;
+  height: auto;
+  min-height: fit-content;
+  max-height: 600px;
+  overflow-x: auto;
+  overflow-y: auto;
 }
 
 .all-bookings {
@@ -1078,6 +1326,11 @@ h2 {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   border: 2px solid #e0e0e0;
   width: 100%;
+  height: auto;
+  min-height: fit-content;
+  max-height: 600px;
+  overflow-x: auto;
+  overflow-y: auto;
 }
 
 @keyframes fadeIn {
@@ -1090,16 +1343,27 @@ h2 {
 }
 
 .row-even {
-  background-color: #f4f7fb;
+  background-color: #ffffff;
 }
 
 .row-odd {
-  background-color: #e3e6f0;
+  background-color: #f8f9fa;
 }
 
 .row-finished {
-  background-color: #f8f9fa !important;
+  background-color: #e9ecef !important;
   color: #6c757d;
+}
+
+.row-even td,
+.row-odd td {
+  color: #2d2d2d !important;
+}
+
+.today-bookings tbody tr:hover td,
+.all-bookings tbody tr:hover td {
+  background-color: #fff3cd !important;
+  color: #2d2d2d !important;
 }
 
 .status-badge {
@@ -1275,6 +1539,260 @@ h2 {
 /* Hover เฉพาะวันที่ว่าง (ไม่มี event) และไม่ใช่วันที่ผ่านไปแล้ว */
 ::v-deep(.fc-daygrid-day:not(.fc-day-today):not(.fc-day-past):hover) {
   background: #9adce424 !important;
+}
+
+/* 🎨 ปุ่มดูรายละเอียด */
+.detail-btn {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  position: relative;
+  z-index: 10;
+  pointer-events: auto;
+  min-width: 120px;
+  height: 36px;
+  box-shadow: 0 2px 6px rgba(251, 191, 36, 0.3);
+}
+
+.detail-btn:hover {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.5);
+}
+
+.detail-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(251, 191, 36, 0.3);
+}
+
+.detail-btn i {
+  font-size: 15px;
+}
+
+/* ให้แน่ใจว่า td ที่มีปุ่มคลิกได้ */
+table td {
+  position: relative;
+  z-index: 1;
+}
+
+/* 🎨 Modal รายละเอียดเต็ม */
+.detail-modal .popup-content {
+  max-width: 700px !important;
+  width: 90% !important;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 15px;
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border-radius: 8px;
+  border-left: 4px solid #fbbf24;
+  transition: all 0.3s ease;
+}
+
+.detail-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.detail-item.full-width {
+  grid-column: 1 / -1;
+}
+
+.detail-item strong {
+  color: #2d2d2d;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.detail-item strong i {
+  color: #fbbf24;
+  font-size: 14px;
+}
+
+.detail-item span {
+  color: #495057;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.detail-item .large-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2d2d2d;
+}
+
+.equipment-section {
+  margin-top: 20px;
+  padding: 20px;
+  background: linear-gradient(135deg, #fff9e6, #fffbf0);
+  border-radius: 10px;
+  border: 2px solid #fbbf24;
+}
+
+.equipment-section h3 {
+  color: #2d2d2d;
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.equipment-section h3 i {
+  color: #fbbf24;
+}
+
+.equipment-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.equipment-item {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+}
+
+.equipment-item:hover {
+  border-color: #fbbf24;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.2);
+  transform: translateY(-2px);
+}
+
+.equipment-image {
+  width: 100%;
+  height: 120px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #f5f5f5;
+}
+
+.equipment-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.equipment-details {
+  width: 100%;
+  text-align: center;
+}
+
+.equipment-name {
+  font-weight: 600;
+  color: #2d2d2d;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.equipment-quantity {
+  color: #666;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.no-equipment {
+  text-align: center;
+  padding: 20px;
+  color: #6c757d;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.close-btn {
+  background: linear-gradient(135deg, #6c757d, #495057);
+  padding: 10px 25px;
+  font-size: 15px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.close-btn:hover {
+  background: linear-gradient(135deg, #495057, #343a40);
+}
+
+/* Custom Scrollbar */
+.today-bookings::-webkit-scrollbar,
+.all-bookings::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.today-bookings::-webkit-scrollbar-track,
+.all-bookings::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.today-bookings::-webkit-scrollbar-thumb,
+.all-bookings::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  border-radius: 10px;
+}
+
+.today-bookings::-webkit-scrollbar-thumb:hover,
+.all-bookings::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .equipment-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .main-content {
+    flex-direction: column;
+  }
+  
+  .left-content,
+  .right-content {
+    width: 100%;
+  }
   cursor: pointer;
   transition: background 0.2s;
 }

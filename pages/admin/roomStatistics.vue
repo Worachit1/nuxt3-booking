@@ -262,24 +262,34 @@ const chartOptions = {
 
 // 🚀 Load data on mount
 onMounted(async () => {
-  await Promise.all([
-    bookingStore.fetchAllBookings(),
-    roomStore.fetchAllRooms(),
-    reviewStore.fetchReviews(),
-  ]);
+  try {
+    await Promise.all([
+      bookingStore.fetchAllBookings().catch(err => {
+        console.error('Error fetching bookings:', err);
+        return Promise.resolve();
+      }),
+      roomStore.fetchAllRooms().catch(err => {
+        console.error('Error fetching rooms:', err);
+        return Promise.resolve();
+      }),
+      reviewStore.fetchReviews().catch(err => {
+        console.error('Error fetching reviews:', err);
+        return Promise.resolve();
+      }),
+    ]);
 
-  // สร้างค่าเฉลี่ยเรตติ้งต่อห้องจากข้อมูลรีวิวทั้งหมด (ตลอดเวลา)
-  // หมายเหตุ: หากต้องการจำกัดช่วงเวลา ให้ปรับมาคำนวณเฉพาะรีวิวที่อยู่ในช่วงเดียวกับ period
-  buildRatingsByRoom();
+    // สร้างค่าเฉลี่ยเรตติ้งต่อห้องจากข้อมูลรีวิวทั้งหมด (ตลอดเวลา)
+    // หมายเหตุ: หากต้องการจำกัดช่วงเวลา ให้ปรับมาคำนวณเฉพาะรีวิวที่อยู่ในช่วงเดียวกับ period
+    buildRatingsByRoom();
 
-  currentDate.value = dayjs()
-    .tz()
-    .locale("th")
-    .format("D MMMM YYYY เวลา HH:mm:ss");
+    currentDate.value = dayjs()
+      .tz()
+      .locale("th")
+      .format("D MMMM YYYY เวลา HH:mm:ss");
 
-  weeklyStats.value = calculateStats("week");
-  monthlyStats.value = calculateStats("month");
-  yearlyStats.value = calculateStats("year");
+    weeklyStats.value = calculateStats("week");
+    monthlyStats.value = calculateStats("month");
+    yearlyStats.value = calculateStats("year");
 
   // ฟังก์ชันสร้างสีแบบไล่โทนตามจำนวนการจอง
   const generateGradientColors = (data) => {
@@ -358,6 +368,10 @@ onMounted(async () => {
       .locale("th")
       .format("D MMMM YYYY เวลา HH:mm:ss");
   }, 1000);
+  
+  } catch (error) {
+    console.error('Error in onMounted:', error);
+  }
 });
 
 // เคลียร์ interval เมื่อละทิ้ง component

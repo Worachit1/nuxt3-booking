@@ -230,28 +230,18 @@ function hideTooltip() {
 
       <!-- เฉพาะ Admin เท่านั้น -->
       <div v-if="isAdmin">
-        <router-link
-          to="/admin/buildings"
-          class="home-link"
-          exact-active-class="active-link"
-        >
-          <i class="fa-solid fa-pen-nib"></i> จัดการอาคาร
-        </router-link>
+        <div class="menu-section-title">
+          <i class="fa-solid fa-user-shield"></i> เมนูผู้ดูแลระบบ
+        </div>
 
         <router-link
-          to="/admin/rooms"
+          to="/admin/dashboard"
           class="home-link"
           exact-active-class="active-link"
         >
-          <i class="fa-solid fa-pen-nib"></i> จัดการห้อง
+          <i class="fa-solid fa-chart-line"></i> Dashboard
         </router-link>
-        <router-link
-          to="/admin/equipment"
-          class="home-link"
-          exact-active-class="active-link"
-        >
-          <i class="fa-solid fa-pen-nib"></i> จัดการอุปกรณ์เสริม
-        </router-link>
+
         <router-link
           to="/admin/bookings"
           class="home-link"
@@ -261,11 +251,43 @@ function hideTooltip() {
         </router-link>
 
         <router-link
+          to="/admin/roomStatistics"
+          class="home-link"
+          exact-active-class="active-link"
+        >
+          <i class="fa-solid fa-chart-simple"></i> สถิติห้องประชุม
+        </router-link>
+
+        <router-link
+          to="/admin/buildings"
+          class="home-link"
+          exact-active-class="active-link"
+        >
+          <i class="fa-solid fa-building"></i> จัดการอาคาร
+        </router-link>
+
+        <router-link
+          to="/admin/rooms"
+          class="home-link"
+          exact-active-class="active-link"
+        >
+          <i class="fa-solid fa-door-open"></i> จัดการห้อง
+        </router-link>
+
+        <router-link
+          to="/admin/equipment"
+          class="home-link"
+          exact-active-class="active-link"
+        >
+          <i class="fa-solid fa-wrench"></i> จัดการอุปกรณ์เสริม
+        </router-link>
+
+        <router-link
           to="/admin/reviews"
           class="home-link"
           exact-active-class="active-link"
         >
-          <i class="fas fa-receipt"></i> รายการรีวิวห้อง
+          <i class="fa-solid fa-star"></i> รายการรีวิวห้อง
         </router-link>
 
         <router-link
@@ -273,11 +295,15 @@ function hideTooltip() {
           class="home-link"
           exact-active-class="active-link"
         >
-          <i class="fa-solid fa-pen-nib"></i> จัดการแจ้งรายงานปัญหา
+          <i class="fa-solid fa-flag"></i> จัดการแจ้งรายงานปัญหา
         </router-link>
       </div>
 
-      <!-- ประวัติการจอง (ทุกคนเห็นได้) -->
+      <!-- เมนูผู้ใช้ทั่วไป -->
+      <div class="menu-section-title">
+        <i class="fa-solid fa-user"></i> เมนูผู้ใช้
+      </div>
+
       <router-link
         :to="`/user/equipment`"
         class="home-link"
@@ -292,14 +318,6 @@ function hideTooltip() {
         exact-active-class="active-link"
       >
         <i class="fas fa-history"></i> ประวัติการจอง
-      </router-link>
-
-      <router-link
-        :to="`/bookingStatistics`"
-        class="home-link"
-        exact-active-class="active-link"
-      >
-        <i class="fa-solid fa-chart-simple"></i> สถิติการจอง
       </router-link>
 
       <router-link
@@ -467,6 +485,26 @@ function hideTooltip() {
   color: #909090;
   font-size: 14px;
   margin-right: 20px;
+}
+
+/* Menu Section Title */
+.menu-section-title {
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 14px;
+  margin-top: 25px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  background: rgba(80, 80, 80, 0.4);
+  border-radius: 8px;
+  border-left: 4px solid #667eea;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.menu-section-title i {
+  font-size: 16px;
 }
 
 /* Custom Tooltip Modal */

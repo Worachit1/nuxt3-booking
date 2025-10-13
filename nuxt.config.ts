@@ -35,7 +35,7 @@ export default defineNuxtConfig({
   ],
   runtimeConfig: {
     public: {
-      apiBase: '', // can be overridden by NUXT_PUBLIC_API_BASE environment variable
+      apiBase: 'http://localhost:3001', // can be overridden by NUXT_PUBLIC_API_BASE environment variable
     }
   },
   routeRules: {

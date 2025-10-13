@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, computed } from "vue";
+import { onMounted, ref, computed, nextTick } from "vue";
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 
@@ -109,6 +109,16 @@ const showEquipmentModal = ref(false);
 const selectedBookingEquipments = ref([]);
 const currentBookingForEquipment = ref(null);
 
+const closeModal = async () => {
+  console.log("🔴 กำลังปิด modal...");
+  showModal.value = false;
+  selectedBooking.value = null;
+  await nextTick(); // บังคับให้ Vue update DOM ทันที
+  // รอให้ animation เสร็จ
+  await new Promise(resolve => setTimeout(resolve, 100));
+  console.log("✅ ปิด modal แล้ว, showModal =", showModal.value);
+};
+
 const handleUpdateStatus = async (bookingId, status) => {
   try {
     const booking = bookings.value.find((b) => b.id === bookingId);
@@ -123,6 +133,7 @@ const handleUpdateStatus = async (bookingId, status) => {
           booking.end_time > b.start_time
       );
       if (isOverlap) {
+        await closeModal();
         await Swal.fire({
           icon: "error",
           title: "ไม่สามารถอนุมัติได้",
@@ -136,6 +147,9 @@ const handleUpdateStatus = async (bookingId, status) => {
         return;
       }
     }
+
+    // ปิด modal ก่อนที่จะแสดง SweetAlert confirmation
+    await closeModal();
 
     const actionText = status === "Approved" ? "อนุมัติ" : "ปฏิเสธ";
     const confirmResult = await Swal.fire({
@@ -152,7 +166,9 @@ const handleUpdateStatus = async (bookingId, status) => {
       },
     });
 
-    if (!confirmResult.isConfirmed) return;
+    if (!confirmResult.isConfirmed) {
+      return;
+    }
 
     const updatedBooking = {
       status,
@@ -160,6 +176,7 @@ const handleUpdateStatus = async (bookingId, status) => {
     };
 
     await bookingStore.updateStatusBooking(bookingId, updatedBooking);
+    
     await Swal.fire({
       icon: "success",
       title: "อัปเดตสถานะเรียบร้อยแล้ว",
@@ -172,6 +189,10 @@ const handleUpdateStatus = async (bookingId, status) => {
     window.location.reload();
   } catch (error) {
     console.error("❌ Error updating booking status:", error);
+    
+    // ปิด modal ในกรณี error ด้วย
+    await closeModal();
+    
     await Swal.fire({
       icon: "error",
       title: "เกิดข้อผิดพลาดในการอัปเดต",
@@ -181,9 +202,6 @@ const handleUpdateStatus = async (bookingId, status) => {
         confirmButton: "btn-ok",
       },
     });
-  } finally {
-    showModal.value = false;
-    selectedBooking.value = null;
   }
 };
 
@@ -446,7 +464,7 @@ const closeEquipmentModal = () => {
           >
             ปฏิเสธ
           </button>
-          <button @click="showModal = false" class="btn-close">ปิด</button>
+          <button @click="closeModal()" class="btn-close">ปิด</button>
         </div>
       </div>
     </div>
@@ -1141,45 +1159,57 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
+  cursor: pointer !important;
+  transition: all 0.3s ease;
 }
 
 .modal-actions .btn-approved {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: white;
   border: none;
+  cursor: pointer !important;
+  opacity: 1 !important;
+  text-decoration: none !important;
 }
 
 .modal-actions .btn-approved:hover {
   background: linear-gradient(135deg, #059669 0%, #047857 100%);
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+  cursor: pointer !important;
 }
 
 .modal-actions .btn-cancel {
   background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
   color: white;
   border: none;
-  text-decoration: none;
+  text-decoration: none !important;
+  cursor: pointer !important;
+  opacity: 1 !important;
 }
 
 .modal-actions .btn-cancel:hover {
   background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(220, 53, 69, 0.4);
+  cursor: pointer !important;
 }
 
-.btn-close {
+.modal-actions .btn-close {
   background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
   color: white;
   padding: 12px 28px;
   font-size: 15px;
   border-radius: 10px;
+  cursor: pointer !important;
+  border: none;
 }
 
-.btn-close:hover {
+.modal-actions .btn-close:hover {
   background: linear-gradient(135deg, #5a6268 0%, #4e555b 100%);
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(108, 117, 125, 0.4);
+  cursor: pointer !important;
 }
 
 /* Equipment Modal */

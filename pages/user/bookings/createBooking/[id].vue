@@ -196,44 +196,57 @@ onMounted(async () => {
     const bookings = await bookingStore.fetchBookingByRoomId(
       Booking.value.room_id
     );
-    // แปลงเป็น array ของช่วงเวลา (เฉพาะวันที่ที่เลือก)
+    // แปลงเป็น array ของช่วงเวลา (เฉพาะวันที่ที่เลือก และสถานะ Approved หรือ Pending)
     bookedRanges.value = bookings
-      .filter(
-        (b) =>
-          dayjs.unix(b.start_time).format("YYYY-MM-DD") === lockedDate.value
-      )
+      .filter((b) => {
+        const bookingDate = dayjs.unix(b.start_time).format("YYYY-MM-DD");
+        const status = String(b.status || "").toLowerCase();
+        const isValidStatus = status === "approved" || status === "pending";
+        const isSameDate = bookingDate === lockedDate.value;
+        
+        return isSameDate && isValidStatus;
+      })
       .map((b) => ({
         start: dayjs.unix(b.start_time).format("HH:mm"),
         end: dayjs.unix(b.end_time).format("HH:mm"),
+        status: b.status,
       }));
+    
+    console.log("โหลดการจองสำหรับวันที่:", lockedDate.value);
+    console.log("การจองที่พบ:", bookedRanges.value);
   }
 });
 
 function isTimeOverlapped(start, end) {
+  // ต้องมีการจองอย่างน้อย 1 รายการถึงจะตรวจสอบ
+  if (bookedRanges.value.length === 0) return false;
+  
   return bookedRanges.value.some((range) => {
-    // ถ้าเวลาเริ่ม < เวลาสิ้นสุดที่จองไว้ และ เวลาสิ้นสุด > เวลาเริ่มที่จองไว้
-    return start < range.end && end > range.start;
+    // ตรวจสอบว่าช่วงเวลาทับซ้อนกันหรือไม่
+    // ทับซ้อนเมื่อ: เวลาเริ่มใหม่ < เวลาสิ้นสุดเดิม AND เวลาสิ้นสุดใหม่ > เวลาเริ่มเดิม
+    const isOverlap = start < range.end && end > range.start;
+    
+    if (isOverlap) {
+      console.log("พบการทับซ้อน:", {
+        ช่วงใหม่: { start, end },
+        ช่วงเดิม: range
+      });
+    }
+    
+    return isOverlap;
   });
 }
 
-// เพิ่ม watch สำหรับตรวจสอบเวลาที่อนุญาต
+// เพิ่ม watch สำหรับตรวจสอบเวลาที่อนุญาต (แต่ไม่ alert ทันที)
+// จะตรวจสอบตอน submit แทน
 watch(
   [() => Booking.value.start_time, () => Booking.value.end_time],
   ([start, end]) => {
+    // เอา alert ออก ให้ตรวจสอบตอน submit แทน
+    // เพื่อไม่ให้รบกวนตอนกำลังเลือกเวลา
     if (start && end) {
-      // ตรวจสอบเวลาทับซ้อน เฉพาะเมื่อเวลาอยู่ในช่วงที่อนุญาต
-      if (isAllowedTime(start) && isAllowedTime(end)) {
-        if (isTimeOverlapped(start, end)) {
-          Swal.fire({
-            icon: "warning",
-            title: "ช่วงเวลานี้ถูกจองแล้ว",
-            text: "กรุณาเลือกเวลาอื่นที่ว่าง",
-            confirmButtonText: "ตกลง",
-          });
-          Booking.value.start_time = "";
-          Booking.value.end_time = "";
-        }
-      }
+      console.log("เลือกเวลา:", { start, end });
+      console.log("การจองที่มีอยู่:", bookedRanges.value);
     }
   }
 );
@@ -252,6 +265,21 @@ const handleConfirm = async () => {
       icon: "warning",
       title: "เวลาอยู่นอกช่วงของห้อง",
       text: "กรุณาเลือกเวลาใหม่",
+      confirmButtonText: "ตกลง",
+      customClass: {
+        popup: "my-popup",
+        confirmButton: "btn-ok",
+      },
+    });
+    return;
+  }
+
+  // ตรวจสอบเวลาทับซ้อนกับการจองในวันเดียวกัน (จาก bookedRanges)
+  if (isTimeOverlapped(Booking.value.start_time, Booking.value.end_time)) {
+    await Swal.fire({
+      icon: "warning",
+      title: "ช่วงเวลานี้ถูกจองแล้ว",
+      text: "กรุณาเลือกเวลาอื่นที่ว่าง",
       confirmButtonText: "ตกลง",
       customClass: {
         popup: "my-popup",
@@ -793,9 +821,9 @@ const handleCancel = () => {
   margin-top: 10px;
 }
 .equipment-card {
-  background: #f7fafd;
+  background: linear-gradient(135deg, #2d2d2d, #1a1a1a);
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.08);
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.15);
   padding: 18px 22px;
   min-width: 220px;
   max-width: 260px;
@@ -803,16 +831,29 @@ const handleCancel = () => {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  border: 2px solid #e3e6f0;
-  transition: box-shadow 0.2s, border-color 0.2s;
+  border: 2px solid #3a3a3a;
+  transition: all 0.3s ease;
 }
+
+.equipment-card:hover {
+  border-color: #fbbf24;
+  box-shadow: 0 6px 16px rgba(251, 191, 36, 0.3);
+  transform: translateY(-2px);
+}
+
 .equipment-card-header {
   display: flex;
   align-items: center;
   font-size: 18px;
   font-weight: bold;
   margin-bottom: 8px;
+  color: #ffffff;
 }
+
+.equipment-card-header i {
+  color: #fbbf24 !important;
+}
+
 .equipment-card-body {
   width: 100%;
   display: flex;
@@ -820,12 +861,12 @@ const handleCancel = () => {
   gap: 10px;
 }
 .equipment-available {
-  color: #219653;
+  color: #4ade80;
   font-weight: bold;
   font-size: 15px;
 }
 .equipment-unavailable {
-  color: #e74c3c;
+  color: #f87171;
   font-weight: bold;
   font-size: 15px;
 }
@@ -836,7 +877,7 @@ const handleCancel = () => {
   margin-top: 6px;
 }
 .quantity-btn {
-  background: #2196f3;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
   color: #fff;
   border: none;
   border-radius: 50%;
@@ -847,54 +888,98 @@ const handleCancel = () => {
   justify-content: center;
   font-size: 18px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 6px rgba(251, 191, 36, 0.3);
 }
+
+.quantity-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.5);
+}
+
 .quantity-btn:disabled {
-  background: #b0bec5;
+  background: #4a4a4a;
   cursor: not-allowed;
+  opacity: 0.5;
 }
 .quantity-display {
   font-size: 18px;
   font-weight: bold;
   min-width: 32px;
   text-align: center;
+  color: #fbbf24;
 }
 .equipment-card.equipment-unavailable {
-  opacity: 0.7;
-  border-color: #e74c3c;
+  opacity: 0.6;
+  border-color: #f87171;
 }
 @media (min-width: 1024px) {
   .modal-content {
-    max-width: 700px;
+    max-width: 750px;
     padding: 40px 48px;
   }
 
   .container {
     max-width: 1000px;
   }
+}
 
-  .create {
-    width: 15%;
+@media (max-width: 768px) {
+  .form-row {
+    flex-direction: column;
+  }
+
+  .container {
+    padding: 20px;
+    width: 95%;
+  }
+
+  .h2 {
+    font-size: 20px;
+  }
+
+  .modal-content {
+    width: 95%;
+    padding: 24px;
+  }
+
+  .equipment-list {
+    flex-direction: column;
+  }
+
+  .equipment-card {
+    max-width: 100%;
   }
 }
 
 .container {
-  padding: 25px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: 30px;
+  background: linear-gradient(135deg, #2d2d2d, #1a1a1a);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   margin: 20px auto;
   width: 90%;
-  max-width: 800px;
+  max-width: 900px;
+  border: 2px solid #3a3a3a;
 }
 
 .h2 {
-  color: #13131f;
-  font-size: 21px;
-  margin-bottom: 20px;
-  text-align: center;
-  font-weight: bold;
+  color: #ffffff;
+  font-size: 24px;
+  margin-bottom: 30px;
+  font-weight: 700;
   text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 3px solid #fbbf24;
+}
+
+.h2 i {
+  color: #fbbf24;
+  font-size: 28px;
 }
 
 /* Info Card Styles */
@@ -903,17 +988,18 @@ const handleCancel = () => {
 }
 
 .info-card {
-  background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-  border: 1px solid #bbdefb;
+  background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%);
+  border: 2px solid #3a3a3a;
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .info-card h3 {
-  color: #13131f;
+  color: #fbbf24;
   margin-bottom: 15px;
   font-size: 18px;
+  font-weight: 700;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -921,26 +1007,26 @@ const handleCancel = () => {
 
 .info-card p {
   margin: 8px 0;
-  color: #333;
+  color: #e0e0e0;
   font-size: 14px;
 }
 
 .contact-info {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(251, 191, 36, 0.1);
   padding: 12px;
   border-radius: 8px;
   margin-top: 15px;
-  border-left: 4px solid #e74c3c;
+  border-left: 4px solid #fbbf24;
 }
 
 .contact-info p:first-child {
-  color: #e74c3c;
+  color: #fbbf24;
   font-weight: bold;
   margin-bottom: 8px;
 }
 
 .time-note {
-  color: #666;
+  color: #a0a0a0;
   font-size: 12px;
   font-weight: normal;
 }
@@ -948,8 +1034,8 @@ const handleCancel = () => {
 .booking-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  max-width: 800px;
+  gap: 24px;
+  max-width: 900px;
   margin: 0 auto;
 }
 
@@ -966,88 +1052,191 @@ const handleCancel = () => {
 }
 
 .form-group label {
-  margin-bottom: 5px;
-  font-weight: bold;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #fbbf24;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 input,
 select,
 textarea {
-  padding: 8px;
+  padding: 12px 16px;
   font-size: 14px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  border: 2px solid #3a3a3a;
+  border-radius: 8px;
+  background: #1a1a1a;
+  color: #ffffff;
+  transition: all 0.3s ease;
 }
 
-textarea {
-  height: 100px;
+/* สีขาวสำหรับ time picker */
+input[type="time"] {
+  color-scheme: light;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff;
 }
 
-.error-text {
-  color: #e74c3c;
-  font-size: 12px;
-  margin-top: 6px;
+input[type="time"]::-webkit-datetime-edit {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
-.create {
-  padding: 10px 20px;
-  background-color: #13131f;
-  color: white;
-  border: none;
-  border-radius: 9px;
+input[type="time"]::-webkit-datetime-edit-fields-wrapper {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+input[type="time"]::-webkit-datetime-edit-text {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  padding: 0 2px;
+}
+
+input[type="time"]::-webkit-datetime-edit-hour-field,
+input[type="time"]::-webkit-datetime-edit-minute-field,
+input[type="time"]::-webkit-datetime-edit-ampm-field {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  background: transparent;
+}
+
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(200%) contrast(100%);
   cursor: pointer;
-  margin-top: 20px;
-  width: 20%;
-  align-self: center;
+  width: 20px;
+  height: 20px;
 }
 
-.create:disabled {
-  background-color: #9aa0a6;
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+  filter: invert(100%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(250%) contrast(100%);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: #fbbf24;
+  box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.1);
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: #2d2d2d;
+  color: #888;
   cursor: not-allowed;
 }
 
-.create:hover {
-  background-color: #4a4a4a;
-  transition: background-color 0.3s;
+textarea {
+  height: 120px;
+  resize: vertical;
+}
+
+.error-text {
+  color: #f87171;
+  font-size: 12px;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+}
+
+.error-text::before {
+  content: "⚠️";
+  font-size: 14px;
+}
+
+.create {
+  padding: 14px 32px;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-top: 30px;
+  font-size: 16px;
+  font-weight: 700;
+  align-self: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(251, 191, 36, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.create:disabled {
+  background: #4a4a4a;
+  cursor: not-allowed;
+  opacity: 0.6;
+  box-shadow: none;
+}
+
+.create:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(251, 191, 36, 0.6);
+}
+
+.create:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .modal-buttons {
   display: flex;
   justify-content: flex-end;
-  gap: 20px;
-  margin-top: 20px;
+  gap: 16px;
+  margin-top: 30px;
+  padding-top: 20px;
+  border-top: 1px solid #3a3a3a;
 }
 
 .confirm {
-  background-color: #04bd35;
+  background: linear-gradient(135deg, #10b981, #059669);
   color: white;
-  padding: 8px 16px;
+  padding: 12px 28px;
   border: none;
-  border-radius: 6px;
+  border-radius: 10px;
   cursor: pointer;
+  font-weight: 700;
+  font-size: 15px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
 .confirm:hover {
-  background-color: #039d2b;
-  transition: background-color 0.3s;
+  background: linear-gradient(135deg, #059669, #047857);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.6);
 }
 
 .cancel {
   position: absolute;
-  top: 16px;
-  right: 20px;
-  color: #13131f;
-  padding: 8px 16px;
+  top: 20px;
+  right: 24px;
+  color: #e0e0e0;
+  background: transparent;
+  padding: 8px 12px;
   border: none;
-  border-radius: 6px;
+  border-radius: 50%;
   cursor: pointer;
-  font-size: 20px;
+  font-size: 24px;
+  transition: all 0.3s ease;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .cancel:hover {
-  background-color: #e63939;
+  background-color: #ef4444;
   color: white;
-  transition: background-color 0.5s;
+  transform: rotate(90deg);
 }
 
 /* Modal overlay */
@@ -1056,7 +1245,8 @@ textarea {
   inset: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1066,58 +1256,105 @@ textarea {
 /* กล่อง modal */
 .modal-content {
   position: relative;
-  background-color: #ffffff;
-  border-radius: 16px;
-  width: 70%;
-  max-width: 560px;
-  max-height: 80vh;
+  background: linear-gradient(135deg, #2d2d2d, #1a1a1a);
+  border-radius: 20px;
+  width: 85%;
+  max-width: 650px;
+  max-height: 85vh;
   overflow-y: auto;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
-  padding: 32px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(251, 191, 36, 0.2);
+  padding: 36px;
   animation: fadeInUp 0.3s ease-out;
   transition: all 0.3s ease;
-  color: #1f2937;
+  color: #ffffff;
   margin-top: 45px;
+  border: 2px solid #3a3a3a;
+}
+
+/* Custom scrollbar for modal */
+.modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 10px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  border-radius: 10px;
 }
 
 /* หัวข้อ modal */
 .modal-title {
-  font-size: 20px;
-  font-weight: bold;
-  margin-bottom: 20px;
-  color: #111827;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  color: #ffffff;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #fbbf24;
+}
+
+.modal-title i {
+  color: #fbbf24;
 }
 
 /* เนื้อหา section */
 .modal-section {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .modal-section strong {
-  display: block;
-  margin-bottom: 6px;
-  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: #fbbf24;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.modal-section strong i {
+  font-size: 16px;
 }
 
 /* รายละเอียด */
 .detail {
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
+  background: #1a1a1a;
+  border: 2px solid #3a3a3a;
   border-radius: 10px;
-  padding: 12px 16px;
-  color: #374151;
+  padding: 14px 18px;
+  color: #e0e0e0;
   font-size: 15px;
   line-height: 1.6;
+  transition: all 0.3s ease;
+}
+
+.detail:hover {
+  border-color: #fbbf24;
 }
 
 /* Equipment Modal Styles */
+.equipment-section {
+  background: rgba(251, 191, 36, 0.05);
+  padding: 20px;
+  border-radius: 12px;
+  border: 2px solid #3a3a3a;
+  margin-top: 10px;
+}
+
 .equipment-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 10px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #3a3a3a;
 }
 
 .equipment-info {
@@ -1125,16 +1362,9 @@ textarea {
 }
 
 .equipment-name {
-  font-weight: bold;
-  color: #13131f;
-}
-
-.equipment-available {
-  font-size: 14px;
-}
-
-.equipment-unavailable {
-  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 16px;
 }
 
 /* Animation */
