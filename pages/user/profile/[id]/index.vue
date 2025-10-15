@@ -339,6 +339,14 @@ onMounted(async () => {
             </button>
           </div>
         </div>
+        <button
+          class="btn-edit"
+          style="margin: 32px auto 0 auto; display: block;"
+          @click="router.push(`/user/profile/${userId}/line`)"
+        >
+          <i class="fa-brands fa-line"></i>
+          เชื่อม LINE เพื่อรับการแจ้งเตือน
+        </button>
       </div>
     </div>
   </div>

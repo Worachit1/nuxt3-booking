@@ -122,6 +122,7 @@ const formatCreatedAt = (rep) => {
 }
 
 .title {
+  padding: 10px;
   font-size: 28px;
   font-weight: 700;
   margin: 0 0 24px;

@@ -106,6 +106,8 @@ onMounted(async () => {
   document.addEventListener("click", handleClickProfileOutside);
 
   if (userId) {
+    // โหลดข้อมูล user เข้า store
+    await userStore.getUserById(userId);
     await userRoleStore.getUserRoleById(userId);
     await bookingStore.fetchBookings();
   }

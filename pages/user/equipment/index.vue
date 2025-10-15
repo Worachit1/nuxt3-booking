@@ -3,6 +3,10 @@ import { ref, onMounted, onBeforeUnmount } from "vue";
 import { useEquipmentStore } from "@/store/equipmentStore";
 import LoadingPage from "@/components/Loading.vue";
 
+definePageMeta({
+  middleware: ["load-user", "user-only"],
+});
+
 const equipmentStore = useEquipmentStore();
 const { isLoading } = storeToRefs(equipmentStore);
 
@@ -66,10 +70,6 @@ onBeforeUnmount(() => {
             <h1>รายการอุปกรณ์เสริม</h1>
             <p class="subtitle">อุปกรณ์เสริมสำหรับการจองห้อง</p>
           </div>
-        </div>
-        <div class="refresh-indicator" :class="{ active: isRefreshing }">
-          <i class="fa-solid fa-sync-alt"></i>
-          <span>{{ isRefreshing ? "กำลังอัปเดต..." : "อัปเดตอัตโนมัติ" }}</span>
         </div>
       </div>
     </div>

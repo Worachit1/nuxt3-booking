@@ -21,7 +21,7 @@ import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 
 definePageMeta({
-  middleware: ["load-user"],
+  middleware: ["load-user", "user-only"],
 });
 
 const date = ref(dayjs().format("YYYY-MM-DD"));
@@ -1793,8 +1793,6 @@ table td {
   .right-content {
     width: 100%;
   }
-  cursor: pointer;
-  transition: background 0.2s;
 }
 
 /* ถ้าอยากให้วันที่วันนี้ (today) ไม่เปลี่ยนสี */

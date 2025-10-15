@@ -112,8 +112,13 @@ function hideTooltip() {
       </div>
       <br />
 
-      <!-- หน้าหลัก -->
-      <router-link to="/" class="home-link" exact-active-class="active-link">
+      <!-- หน้าหลัก - ซ่อนจาก Admin -->
+      <router-link 
+        v-if="!isAdmin"
+        to="/" 
+        class="home-link" 
+        exact-active-class="active-link"
+      >
         <i class="fas fa-home"></i> หน้าหลัก
       </router-link>
 
@@ -299,34 +304,36 @@ function hideTooltip() {
         </router-link>
       </div>
 
-      <!-- เมนูผู้ใช้ทั่วไป -->
-      <div class="menu-section-title">
-        <i class="fa-solid fa-user"></i> เมนูผู้ใช้
+      <!-- เมนูผู้ใช้ทั่วไป - ซ่อนจาก Admin -->
+      <div v-if="!isAdmin">
+        <div class="menu-section-title">
+          <i class="fa-solid fa-user"></i> เมนูผู้ใช้
+        </div>
+
+        <router-link
+          :to="`/user/equipment`"
+          class="home-link"
+          exact-active-class="active-link"
+        >
+          <i class="fa-solid fa-toolbox"></i> อุปกรณ์เสริม
+        </router-link>
+
+        <router-link
+          :to="`/user/bookings/history/${userId}`"
+          class="home-link"
+          exact-active-class="active-link"
+        >
+          <i class="fas fa-history"></i> ประวัติการจอง
+        </router-link>
+
+        <router-link
+          :to="`/user/reports`"
+          class="home-link"
+          exact-active-class="active-link"
+        >
+          <i class="fa-solid fa-circle-info"></i> แจ้งการรายงานห้อง
+        </router-link>
       </div>
-
-      <router-link
-        :to="`/user/equipment`"
-        class="home-link"
-        exact-active-class="active-link"
-      >
-        <i class="fa-solid fa-toolbox"></i> อุปกรณ์เสริม
-      </router-link>
-
-      <router-link
-        :to="`/user/bookings/history/${userId}`"
-        class="home-link"
-        exact-active-class="active-link"
-      >
-        <i class="fas fa-history"></i> ประวัติการจอง
-      </router-link>
-
-      <router-link
-        :to="`/user/reports`"
-        class="home-link"
-        exact-active-class="active-link"
-      >
-        <i class="fa-solid fa-circle-info"></i> แจ้งการรายงานห้อง
-      </router-link>
     </div>
     <!-- Custom Tooltip Modal -->
     <div

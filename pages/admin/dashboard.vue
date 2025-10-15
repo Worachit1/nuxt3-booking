@@ -519,7 +519,7 @@ const viewBooking = (bookingId) => {
 .page-container {
   background: #f5f5f5;
   min-height: 100vh;
-  padding: 100px 20px 40px 20px;
+  padding: 20px 20px 40px 20px;
 }
 
 /* Page Header */

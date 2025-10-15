@@ -14,7 +14,7 @@ import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 
 definePageMeta({
-  middleware: ["load-user"],
+  middleware: ["load-user", "user-only"],
 });
 
 const formatDateTime = (date) => {

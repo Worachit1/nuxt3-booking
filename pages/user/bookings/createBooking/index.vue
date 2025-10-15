@@ -17,7 +17,7 @@ import { ElSelect, ElOption } from "element-plus";
 import "element-plus/dist/index.css";
 
 definePageMeta({
-  middleware: ["load-user"], // Corrected middleware name
+  middleware: ["load-user", "user-only"], // Corrected middleware name
 });
 
 const route = useRoute();

@@ -6,7 +6,7 @@ import LoadingPage from "~/components/Loading.vue";
 import { useRoomStore } from "@/store/roomStore";
 
 definePageMeta({
-  middleware: ["load-user"]
+  middleware: ["load-user", "user-only"],
 });
 
 const route = useRoute();

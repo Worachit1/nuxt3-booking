@@ -825,6 +825,22 @@ const closeModals = () => {
   align-items: center;
   justify-content: space-between;
   border-bottom: 3px solid #fbbf24;
+  border-radius: 16px 16px 0 0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.modal-header h3 i {
+  color: #fbbf24;
+  font-size: 26px;
 }
 
 .modal-title {
@@ -853,24 +869,29 @@ const closeModals = () => {
   color: white;
 }
 
+/* Close Button - ปุ่มกากบาท */
+.close-btn,
 .btn-close {
-  background: rgba(255, 255, 255, 0.1);
-  border: none;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: 2px solid rgba(255, 255, 255, 0.3);
   color: white;
-  font-size: 24px;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
+  font-size: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
+.close-btn:hover,
 .btn-close:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: rotate(90deg);
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  transform: rotate(90deg) scale(1.1);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.6);
 }
 
 /* Modal Body */

@@ -15,7 +15,7 @@ import "dayjs/locale/th";
 import { navigateTo } from "#app";
 
 definePageMeta({
-  middleware: ["load-user"],
+  middleware: ["load-user", "user-only"],
 });
 
 const route = useRoute();

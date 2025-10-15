@@ -11,7 +11,7 @@ import { useUserStore } from "@/store/userStore";
 import { useBuildingStore } from "@/store/buildingStore";
 import { useBuilding_RoomStore } from "@/store/building_roomStore";
 
-definePageMeta({ middleware: ["load-user"] });
+definePageMeta({ middleware: ["load-user", "user-only"] });
 
 const roomStore = useRoomStore();
 const reportStore = useReport();

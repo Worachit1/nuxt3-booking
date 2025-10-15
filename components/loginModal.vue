@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { useAuthStore } from '@/store/authStore';
+import { useUserStore } from '@/store/userStore';
 import { useRouter } from 'vue-router';
 import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
@@ -15,6 +16,7 @@ const password = ref('');
 const error = ref('');
 const router = useRouter();
 const authStore = useAuthStore();
+const userStore = useUserStore();
 
 function closeModal() {
     emit('close');
@@ -27,13 +29,35 @@ const login = async () => {
             console.error("User ID is not available");
             return;
         }
-        closeModal(); // ปิด modal ทันทีหลัง login สำเร็จ
+        
+        // 🔥 โหลดข้อมูล user ใหม่เข้า store เพื่ออัปเดต header แบบ real-time
+        await userStore.getUserById(user.id);
+        
+        // ปิด modal ก่อน
+        closeModal();
+        
+        // ตรวจสอบ role และ redirect ตามสิทธิ์
+        const isAdmin = user.role_name === 'Admin';
+        const redirectPath = isAdmin ? '/admin/dashboard' : '/';
+        
+        // แสดง SweetAlert สำเร็จ
         await Swal.fire({
             title: 'เข้าสู่ระบบสำเร็จ',
             text: `ยินดีต้อนรับ ${user.first_name} ${user.last_name}`,
             icon: 'success',
+            confirmButtonText: 'ตกลง',
+            timer: 1500,
+            timerProgressBar: true
         });
-        router.push(`/user/profile/${user.id}`);
+        
+        // 🔥 หลังจากปิด Alert แล้ว ให้ reload หน้าเพื่อให้ middleware/component redirect
+        if (isAdmin) {
+            // Admin: Reload หน้าแล้วไปที่ dashboard
+            window.location.replace(redirectPath);
+        } else {
+            // User: Reload หน้าแล้วอยู่ที่หน้าหลัก
+            window.location.reload();
+        }
     } catch (err) {
         console.error("Login error:", err);
         error.value = 'เข้าสู่ระบบไม่สำเร็จ: ' + err.message;
