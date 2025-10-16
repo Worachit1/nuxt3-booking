@@ -742,6 +742,7 @@ const closeEquipmentModal = () => {
 <style scoped>
 /* Layout */
 .page-wrapper {
+  padding: 15px;
   min-height: 110vh;
   display: flex;
   flex-direction: column;
@@ -749,6 +750,7 @@ const closeEquipmentModal = () => {
 }
 
 .container {
+ 
   flex-grow: 1;
   margin: 0 auto;
   max-width: 1400px;
