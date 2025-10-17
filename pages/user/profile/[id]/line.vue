@@ -11,8 +11,6 @@ const code      = ref('')
 const lineUserId = ref('')
 
 const chatLink  = ref<string>('')        // ลิงก์เปิดแชท OA พร้อมข้อความโค้ด
-const chatQR    = ref<string | null>(null)
-const inviteQR  = ref<string | null>(null)
 
 const loading   = ref(false)
 const errorMsg  = ref('')
@@ -29,16 +27,6 @@ onMounted(async () => {
   if (saved) {
     code.value = saved
     chatLink.value = `https://line.me/R/oaMessage/${lineBotBasicId}/?${encodeURIComponent(code.value)}`
-    try {
-      // @ts-ignore
-      const QRCode = (await import('qrcode')).default as any
-      chatQR.value = await toDataURL(QRCode, chatLinkHref.value)
-      if (inviteUrlHref.value) {
-        inviteQR.value = await toDataURL(QRCode, inviteUrlHref.value)
-      }
-    } catch (e) {
-      // ignore QR generation errors here
-    }
   }
 
   let userId = localStorage.getItem('user_id') || ''
@@ -49,14 +37,7 @@ onMounted(async () => {
   }
 })
 
-// helper: บังคับใช้ version callback ของ qrcode -> Promise<string>
-function toDataURL(qrcode: any, text: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    qrcode.toDataURL(String(text), (err: any, url: string) => {
-      if (err) reject(err); else resolve(url)
-    })
-  })
-}
+// no qrcode generation: LINE QR not used
 
 async function fetchPairingCodeByUserId(userId: string) {
   loading.value = true
@@ -79,13 +60,7 @@ async function fetchPairingCodeByUserId(userId: string) {
       chatLink.value = `https://line.me/R/oaMessage/${lineBotBasicId}/?${encodeURIComponent(code.value)}`
   // เก็บไว้ที่ localStorage ให้ขึ้นทันทีเมื่อ reload
   try { localStorage.setItem('line_pairing_code', code.value) } catch (e) { /* ignore */ }
-      // 3) สร้าง QR ด้วย qrcode
-      // @ts-ignore
-      const QRCode = (await import('qrcode')).default as any
-      chatQR.value = await toDataURL(QRCode, chatLinkHref.value)
-      if (inviteUrlHref.value) {
-        inviteQR.value = await toDataURL(QRCode, inviteUrlHref.value)
-      }
+      // QR generation removed (LINE QR not approved)
       return true
     }
     return false
@@ -121,13 +96,7 @@ async function fetchPairingCode() {
     chatLink.value = `https://line.me/R/oaMessage/${lineBotBasicId}/?${encodeURIComponent(code.value)}`
   // เก็บไว้ที่ localStorage ให้ขึ้นทันทีเมื่อ reload
   try { localStorage.setItem('line_pairing_code', code.value) } catch (e) { /* ignore */ }
-    // 3) สร้าง QR ด้วย qrcode
-    // @ts-ignore
-    const QRCode = (await import('qrcode')).default as any
-    chatQR.value = await toDataURL(QRCode, chatLinkHref.value)
-    if (inviteUrlHref.value) {
-      inviteQR.value = await toDataURL(QRCode, inviteUrlHref.value)
-    }
+    // QR generation removed (LINE QR not approved)
   } catch (e: any) {
     errorMsg.value = e?.message || 'เกิดข้อผิดพลาด'
   } finally {
@@ -154,6 +123,12 @@ async function handlePairingButton() {
     loading.value = false
   }
 }
+
+function clearCode() {
+  try { localStorage.removeItem('line_pairing_code') } catch (e) {}
+  code.value = ''
+  chatLink.value = ''
+}
 </script>
 
 <template>
@@ -161,22 +136,53 @@ async function handlePairingButton() {
     <h1>เชื่อม LINE เพื่อรับการแจ้งเตือน</h1>
     <section class="card">
       <h2>กรุณาเพิ่มเพื่อนใน LINE @505stoag </h2>
-        <div class="pairing-code-box">
-          <button
-            class="btn-gold"
-            :disabled="!!loading || !!code"
-            :style="(loading || code) ? 'background: #dc2626; color: #fff;' : ''"
-            @click="handlePairingButton"
-          >
-            <template v-if="!code">ขอรหัสเชื่อม LINE</template>
-            <template v-else>โค้ดพร้อมใช้งาน</template>
-          </button>
-          <span v-if="code" class="pairing-label">โค้ดของคุณ:</span>
-          <span v-if="code" class="pairing-code">{{ code }}</span>
+        <div class="pairing-center">
+          <div class="pairing-code-box">
+            <div>
+              <button
+                class="btn-gold"
+                :disabled="!!loading || !!code"
+                :style="(loading || code) ? 'background: #dc2626; color: #fff;' : ''"
+                @click="handlePairingButton"
+              >
+                <template v-if="!code">ขอรหัสเชื่อม LINE</template>
+                <template v-else>โค้ดพร้อมใช้งาน</template>
+              </button>
+            </div>
+
+            <div class="code-badge" v-if="code">
+              <div class="pairing-label">โค้ดของคุณ</div>
+              <div class="pairing-code-large">{{ code }}</div> 
+            </div>
+          </div>
+          <p v-if="errorMsg" class="error">{{ errorMsg }}</p>
+          <p class="hint">เมื่อส่งข้อความสำเร็จ ระบบจะเชื่อมบัญชี LINE ให้อัตโนมัติ</p>
         </div>
-      <p v-if="errorMsg" style="color:#dc2626; font-weight:600;">{{ errorMsg }}</p>
-  <img v-if="chatQR && code" :src="chatQR" width="220" height="220" alt="Chat QR">
-      <p class="hint">เมื่อส่งข้อความสำเร็จ ระบบจะเชื่อมบัญชี LINE ให้อัตโนมัติ</p>
+    </section>
+    <section class="card examples">
+      <h3>ตัวอย่างการนำโค้ดไปใช้</h3>
+      <div class="examples-grid">
+        <div class="example example-addfriend">
+          <div class="mock-phone css-mock">
+            <div class="banner">
+              <div class="banner-text">BOOK<br/>ROOM</div>
+            </div>
+            <div class="avatar">BR</div>
+            <div class="bot-name">BookingRoom <span class="bot-sub">@505stoag</span></div>
+            <div class="chat-btn">แชท</div>
+          </div>
+          <p class="caption">1) เปิดหน้าบอทบน LINE แล้วกด "แชท" หรือกดปุ่มสีเขียวเพื่อส่งข้อความ</p>
+        </div>
+
+        <div class="example example-chat">
+          <div class="mock-chat">
+            <div class="bubble bot">ขอบคุณที่เพิ่มบอท! พิมพ์ PAIR-&lt;โค้ด&gt; เพื่อเชื่อมบัญชี</div>
+            <div class="bubble user">PAIR-C1C2AC</div>
+            <div class="bubble bot success">เชื่อมบัญชีเรียบร้อย ✅</div>
+          </div>
+          <p class="caption">2) ส่งข้อความรูปแบบ <strong>PAIR-โค้ด</strong> ในแชทกับบอทเพื่อเชื่อมบัญชี</p>
+        </div>
+      </div>
     </section>
   </div>
 </template>
@@ -217,6 +223,14 @@ async function handlePairingButton() {
   margin: 12px 0 0 0;
   flex-wrap: wrap;
 }
+.pairing-center { text-align: center; }
+.pairing-code-box { justify-content: center; }
+.code-badge { margin-top: 18px; display: inline-block; text-align: center; }
+.pairing-code-large { font-family: 'Kanit', 'Roboto Mono', monospace; font-size: 2.2rem; font-weight: 900; color: #b45309; background: #fff7ed; padding: 12px 28px; border-radius: 12px; box-shadow: 0 8px 24px rgba(180,83,9,0.08); margin-top: 8px; }
+.actions { display:flex; gap:10px; justify-content:center; margin-top:10px; }
+.btn-outline { display:inline-block; padding:8px 14px; border-radius:8px; border:2px solid #f59e0b; color:#b45309; background:transparent; font-weight:700; text-decoration:none; }
+.btn-clear { background:#ef4444; color:#fff; border:none; padding:8px 14px; border-radius:8px; cursor:pointer; font-weight:700; }
+.error { color:#dc2626; font-weight:700; margin-top:12px; }
 .pairing-label {
   font-weight: 600;
   color: #2d2d2d;
@@ -233,10 +247,29 @@ async function handlePairingButton() {
   box-shadow: 0 2px 8px rgba(251,191,36,0.08);
 }
 .pairing-expire {
-  color: #6b7280;
-  font-size: 0.95rem;
-  margin-left: 8px;
+  display:none;
 }
+.examples { margin-top: 18px; }
+.examples-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.example { background: #f9fafb; padding: 14px; border-radius: 12px; }
+.mock-phone { position: relative; height: 300px; background: linear-gradient(#0b1220, #0b1a2a); border-radius: 12px; overflow: hidden; display:flex; align-items:center; justify-content:center; }
+.mock-phone img { max-width:100%; opacity:0.95 }
+.mock-phone .cta { position: absolute; bottom: 18px; left: 12px; right:12px; background: #10b981; color:#fff; text-align:center; padding:12px; border-radius:8px; font-weight:700 }
+.mock-phone .brand { position:absolute; top: 18px; left: 18px; color:#fff; font-weight:800 }
+.css-mock { background: linear-gradient(135deg,#071125 0%, #071a2a 100%); padding: 0; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; position:relative }
+.css-mock .banner { width:100%; height:110px; background: linear-gradient(90deg,#002244,#004466); display:flex; align-items:center; justify-content:center }
+.css-mock .banner-text { color:#8fd3ff; font-weight:900; font-size:32px; letter-spacing:2px }
+.css-mock .avatar { width:84px; height:84px; border-radius:50%; background:linear-gradient(90deg,#032  ,#026); color:#9ee7ff; display:flex; align-items:center; justify-content:center; font-weight:900; position:relative; top:-36px; box-shadow:0 8px 20px rgba(0,0,0,0.3) }
+.css-mock .bot-name { margin-top:-18px; color:#fff; font-weight:800 }
+.css-mock .bot-sub { display:block; color:#cbd5e1; font-weight:600; font-size:12px }
+.css-mock .chat-btn { margin-top:18px; background:#10b981; color:#fff; padding:12px 28px; border-radius:10px; font-weight:800 }
+.mock-chat { background: #fff; border-radius: 12px; padding: 12px; height:300px; overflow:auto; display:flex; flex-direction:column; gap:8px }
+.bubble { padding: 10px 12px; border-radius: 12px; max-width: 78%; }
+.bubble.bot { background: #f3e8ff; align-self:flex-start; color:#312e81 }
+.bubble.user { background: #fff; border:1px solid #e5e7eb; align-self:flex-end }
+.bubble.success { background:#ecfdf5; color:#065f46 }
+.caption { font-size: 0.95rem; color:#6b7280; margin-top:10px }
+@media (max-width: 900px) { .examples-grid { grid-template-columns: 1fr } }
 @media (max-width: 600px) {
   .card { padding: 14px 6px 20px 6px; border-radius: 10px; }
   .pairing-code-box { font-size: 1rem; gap: 6px; }
