@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 
 // === runtime config ===
 const {
@@ -8,7 +8,6 @@ const {
 
 // === states ===
 const code      = ref('')
-const expiresAt = ref<number | null>(null)
 const lineUserId = ref('')
 
 const chatLink  = ref<string>('')        // ลิงก์เปิดแชท OA พร้อมข้อความโค้ด
@@ -22,12 +21,26 @@ const errorMsg  = ref('')
 const inviteUrlHref = computed<string>(() => String(lineInviteUrl || ''))
 const chatLinkHref  = computed<string>(() => chatLink.value || '')
 
-const isExpired = computed(() => {
-  if (!expiresAt.value) return true
-  return Date.now() > expiresAt.value * 1000
-})
+// no expiry tracking: once code is present it is shown permanently
 
 onMounted(async () => {
+  // ถ้ามี code เก่าที่เก็บไว้ใน localStorage ให้ขึ้นก่อน เพื่อ UX ที่ไม่ต้องรอเครือข่าย
+  const saved = localStorage.getItem('line_pairing_code') || ''
+  if (saved) {
+    code.value = saved
+    chatLink.value = `https://line.me/R/oaMessage/${lineBotBasicId}/?${encodeURIComponent(code.value)}`
+    try {
+      // @ts-ignore
+      const QRCode = (await import('qrcode')).default as any
+      chatQR.value = await toDataURL(QRCode, chatLinkHref.value)
+      if (inviteUrlHref.value) {
+        inviteQR.value = await toDataURL(QRCode, inviteUrlHref.value)
+      }
+    } catch (e) {
+      // ignore QR generation errors here
+    }
+  }
+
   let userId = localStorage.getItem('user_id') || ''
   if (!userId && lineUserId.value) userId = lineUserId.value
   if (userId) {
@@ -60,11 +73,12 @@ async function fetchPairingCodeByUserId(userId: string) {
       { method: 'GET', headers }
     )
     console.log('GET /api/v1/line/pairing-code/{userId} response:', res)
-    if (res.data && res.data.code && res.data.expires_at) {
+    if (res.data && res.data.code) {
       code.value = res.data.code
-      expiresAt.value = res.data.expires_at
       lineUserId.value = res.data.user_id
       chatLink.value = `https://line.me/R/oaMessage/${lineBotBasicId}/?${encodeURIComponent(code.value)}`
+  // เก็บไว้ที่ localStorage ให้ขึ้นทันทีเมื่อ reload
+  try { localStorage.setItem('line_pairing_code', code.value) } catch (e) { /* ignore */ }
       // 3) สร้าง QR ด้วย qrcode
       // @ts-ignore
       const QRCode = (await import('qrcode')).default as any
@@ -72,7 +86,7 @@ async function fetchPairingCodeByUserId(userId: string) {
       if (inviteUrlHref.value) {
         inviteQR.value = await toDataURL(QRCode, inviteUrlHref.value)
       }
-      return !isExpired.value // true = ยังไม่หมดอายุ
+      return true
     }
     return false
   } catch (e: any) {
@@ -102,10 +116,11 @@ async function fetchPairingCode() {
       `${apiBase}/api/v1/line/pairing-code`,
       { method: 'POST', headers }
     )
-    code.value = res.data.code
-    expiresAt.value = res.data.expires_at
+  code.value = res.data.code
     lineUserId.value = res.data.user_id
     chatLink.value = `https://line.me/R/oaMessage/${lineBotBasicId}/?${encodeURIComponent(code.value)}`
+  // เก็บไว้ที่ localStorage ให้ขึ้นทันทีเมื่อ reload
+  try { localStorage.setItem('line_pairing_code', code.value) } catch (e) { /* ignore */ }
     // 3) สร้าง QR ด้วย qrcode
     // @ts-ignore
     const QRCode = (await import('qrcode')).default as any
@@ -146,24 +161,21 @@ async function handlePairingButton() {
     <h1>เชื่อม LINE เพื่อรับการแจ้งเตือน</h1>
     <section class="card">
       <h2>กรุณาเพิ่มเพื่อนใน LINE @505stoag </h2>
-      <div class="pairing-code-box">
-        <button
-          class="btn-gold"
-          :disabled="!!loading || (!!code && !isExpired)"
-          :style="(loading || (code && !isExpired)) ? 'background: #dc2626; color: #fff;' : ''"
-          @click="handlePairingButton"
-        >
-          <template v-if="!code || isExpired">ขอรหัสเชื่อม LINE</template>
-          <template v-else-if="code && !isExpired">รหัสยังไม่หมดอายุ</template>
-        </button>
-        <span v-if="code && !isExpired" class="pairing-label">โค้ดของคุณ:</span>
-        <span v-if="code && !isExpired" class="pairing-code">{{ code }}</span>
-        <small v-if="expiresAt && code && !isExpired" class="pairing-expire">
-          (หมดอายุ ~ {{ new Date(expiresAt * 1000).toLocaleString() }})
-        </small>
-      </div>
+        <div class="pairing-code-box">
+          <button
+            class="btn-gold"
+            :disabled="!!loading || !!code"
+            :style="(loading || code) ? 'background: #dc2626; color: #fff;' : ''"
+            @click="handlePairingButton"
+          >
+            <template v-if="!code">ขอรหัสเชื่อม LINE</template>
+            <template v-else>โค้ดพร้อมใช้งาน</template>
+          </button>
+          <span v-if="code" class="pairing-label">โค้ดของคุณ:</span>
+          <span v-if="code" class="pairing-code">{{ code }}</span>
+        </div>
       <p v-if="errorMsg" style="color:#dc2626; font-weight:600;">{{ errorMsg }}</p>
-      <img v-if="chatQR && code && !isExpired" :src="chatQR" width="220" height="220" alt="Chat QR">
+  <img v-if="chatQR && code" :src="chatQR" width="220" height="220" alt="Chat QR">
       <p class="hint">เมื่อส่งข้อความสำเร็จ ระบบจะเชื่อมบัญชี LINE ให้อัตโนมัติ</p>
     </section>
   </div>
