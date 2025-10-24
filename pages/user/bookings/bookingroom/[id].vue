@@ -361,6 +361,15 @@ function goToRoomBooking() {
 const showCreateModal = ref(false);
 const selectedDate = ref(null);
 
+// Bookings for selectedDate (used inside create modal right column)
+const filteredBookingsBySelectedDate = computed(() => {
+  if (!selectedDate.value) return [];
+  const dayStart = dayjs(selectedDate.value).startOf("day");
+  return events.value.filter((e) =>
+    dayjs(e.start).isSame(dayStart, "day")
+  );
+});
+
 function handleDateClick(info) {
   // แปลง dateStr ให้เป็นวันที่เสมอ (รองรับทั้ง day view และ week view)
   const selected = dayjs(info.dateStr).startOf("day");
@@ -787,37 +796,66 @@ const calendarOptions = computed(() => ({
       </div>
     </teleport>
 
-    <!-- 🔥 Modal สร้างการจองใหม่เมื่อคลิกวันที่ว่าง -->
+    <!-- 🔥 Modal สร้างการจองใหม่เมื่อคลิกวันที่ว่าง (มีรายการการจองของวันด้านขวา) -->
     <teleport to="body">
       <div v-if="showCreateModal" class="popup-wrapper">
-        <div class="popup-content">
+        <div class="popup-content create-modal-grid">
           <div class="popup-header">
             <i class="fa-solid fa-calendar-plus" style="color: #2196f3"></i>
             สร้างการจองใหม่
           </div>
-          <div class="popup-body">
-            <p>
-              วันที่ที่เลือก: <b>{{ selectedDate }}</b>
-            </p>
-            <button
-              class="booking-button"
-              @click="
-                () => {
-                  console.log(
-                    'router.push',
-                    `/user/bookings/createBooking/${roomId}?date=${selectedDate}`
-                  );
-                  router.push(
-                    `/user/bookings/createBooking/${roomId}?date=${selectedDate}`
-                  );
-                }
-              "
-            >
-              จองวันที่
-              <b>{{
-                dayjs(selectedDate).locale("th").format("D MMMM YYYY")
-              }}</b>
-            </button>
+          <div class="popup-body create-modal-body">
+            <div class="create-left">
+              <p>
+                วันที่ที่เลือก: <b>{{ selectedDate }}</b>
+              </p>
+
+              <button
+                class="booking-button"
+                @click="
+                  () => {
+                    console.log(
+                      'router.push',
+                      `/user/bookings/createBooking/${roomId}?date=${selectedDate}`
+                    );
+                    router.push(
+                      `/user/bookings/createBooking/${roomId}?date=${selectedDate}`
+                    );
+                  }
+                "
+              >
+                จองวันที่
+                <b>{{ dayjs(selectedDate).locale('th').format('D MMMM YYYY') }}</b>
+              </button>
+            </div>
+
+            <div class="create-right">
+              <h3 class="right-title">การจองในวันที่เลือก</h3>
+              <div v-if="filteredBookingsBySelectedDate.length > 0" class="right-list">
+                <div
+                  v-for="(ev, i) in filteredBookingsBySelectedDate.sort((a,b) => (a.start||0) - (b.start||0))"
+                  :key="ev.id || i"
+                  class="right-item"
+                >
+                  <div class="ri-left">
+                    <div class="ri-time">{{ dayjs(ev.start).format('HH:mm') }} - {{ dayjs(ev.end).format('HH:mm') }}</div>
+                    <div class="ri-title">{{ ev.title }}</div>
+                  </div>
+                  <div class="ri-right">
+                    <span
+                      :class="[
+                        'ri-status',
+                        ev.status === 'Approved' ? 'status-approved' : ev.status === 'Pending' ? 'status-pending' : ev.status === 'Finished' ? 'status-finished' : ''
+                      ]"
+                    >
+                      {{ ev.status }}
+                    </span>
+                    <button class="detail-small-btn" @click.stop="openDetailModal(ev)">ดูรายละเอียด</button>
+                  </div>
+                </div>
+              </div>
+              <div v-else class="no-right">ไม่มีการจองในวันที่เลือก</div>
+            </div>
           </div>
           <div class="popup-footer">
             <button @click="closeCreateModal">ปิด</button>
@@ -1127,18 +1165,18 @@ h2 {
 }
 
 .popup-content {
-  background: white;
+  background: linear-gradient(180deg, #fffdf6, #ffffff);
   padding: 32px;
   border-radius: 16px;
   width: 100%;
-  max-width: 550px;
+  max-width: 650px;
   max-height: calc(100vh - 80px);
   overflow-y: auto;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
   animation: scaleIn 0.25s ease;
   position: relative;
   margin: auto;
-  border: 2px solid #e0e0e0;
+  border: 2px solid #f3d88a; /* theme-accent border */
 }
 
 .popup-header {
@@ -1146,8 +1184,9 @@ h2 {
   font-weight: 700;
   color: #2d2d2d;
   margin-bottom: 20px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid #e0e0e0;
+  padding: 14px 18px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(251,191,36,0.12), rgba(255,243,205,0.08));
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1188,6 +1227,34 @@ h2 {
   transition: all 0.3s;
   box-shadow: 0 2px 8px rgba(108, 117, 125, 0.2);
 }
+
+/* Small detail button used inside create-modal right column */
+.detail-small-btn {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
+  box-shadow: 0 2px 6px rgba(251,191,36,0.18);
+}
+.detail-small-btn:hover { transform: translateY(-2px); }
+
+/* Badge style in right-list */
+.ri-status {
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 13px;
+  text-transform: uppercase;
+  display: inline-block;
+}
+
+/* reuse existing status classes for consistent look */
+/* status-approved / status-pending / status-finished classes are applied directly
+  (they are defined earlier) so no extra rules are required here. */
 
 .popup-footer button:hover {
   transform: translateY(-2px);
@@ -1946,6 +2013,64 @@ table td {
   color: #6b7280;
   font-style: italic;
   text-align: center;
+}
+
+/* Styles for create modal two-column layout */
+.create-modal-grid .popup-header {
+  margin-bottom: 12px;
+}
+.create-modal-body {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+.create-left {
+  flex: 1 1 45%;
+}
+.create-right {
+  flex: 1 1 55%;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding-left: 8px;
+  border-left: 1px solid #e6e6e6;
+}
+.right-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+}
+.right-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.right-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #eaeaea;
+}
+.ri-left {
+  display: flex;
+  flex-direction: column;
+}
+.ri-time {
+  font-weight: 700;
+}
+.ri-title {
+  color: #6b7280;
+}
+.ri-right {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+.no-right {
+  color: #6b7280;
 }
 
 /* สำคัญ! บังคับ parent ทุกชั้นไม่ให้ขยาย */

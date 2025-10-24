@@ -386,6 +386,12 @@ const handleEquipmentNext = () => {
   showModal.value = true;
 };
 
+// กลับไปแก้ไขรายการอุปกรณ์จาก modal ยืนยัน
+function backToEquipment() {
+  showModal.value = false;
+  showEquipmentModal.value = true;
+}
+
 const handleCreateBooking = async () => {
   const startDateTime = `${lockedDate.value}T${Booking.value.start_time}`;
   const endDateTime = `${lockedDate.value}T${Booking.value.end_time}`;
@@ -477,7 +483,7 @@ const handleCancel = () => {
       <div class="form-row">
         <div class="form-group">
           <label for="title">หัวข้อการประชุม:</label>
-          <input id="title" v-model="Booking.title" type="text" required />
+          <input id="title" v-model="Booking.title" type="text" required :disabled="showModal" />
         </div>
         <!-- วันที่จอง (แสดงอย่างเดียว) -->
         <div class="form-group">
@@ -505,6 +511,7 @@ const handleCancel = () => {
             :max="allowedEndTime"
             :title="`เลือกได้ระหว่าง ${allowedStartTime} - ${allowedEndTime}`"
             required
+            :disabled="showModal"
           />
           <small v-if="!isStartAllowed" class="error-text"
             >อยู่นอกช่วงเวลาอนุญาต ({{ allowedStartTime }} -
@@ -525,6 +532,7 @@ const handleCancel = () => {
             :max="allowedEndTime"
             :title="`เลือกได้ระหว่าง ${allowedStartTime} - ${allowedEndTime}`"
             required
+            :disabled="showModal"
           />
           <small v-if="!isEndAllowed" class="error-text"
             >อยู่นอกช่วงเวลาอนุญาต ({{ allowedStartTime }} -
@@ -576,11 +584,12 @@ const handleCancel = () => {
             id="description"
             v-model="Booking.description"
             required
+            :disabled="showModal"
           ></textarea>
         </div>
       </div>
 
-      <button type="submit" class="create" :disabled="!canSubmit">
+      <button type="submit" class="create" :disabled="!canSubmit || showModal">
         <i class="fa-solid fa-circle-plus"></i> สร้างการจอง
       </button>
     </form>
@@ -641,7 +650,7 @@ const handleCancel = () => {
           <label for="user"
             ><i class="fa-solid fa-user"></i> ผู้ที่จองห้องประชุม:</label
           >
-          <p class="detail">
+          <p class="detail" >
             {{ user.first_name + " " + user.last_name }}
           </p>
         </div>
@@ -662,7 +671,23 @@ const handleCancel = () => {
           </p>
         </div>
 
+        <!-- แสดงอุปกรณ์ที่เลือกพร้อมจำนวน -->
+        <div v-if="equipmentSelections && equipmentSelections.filter(e => e.selectedQuantity > 0).length > 0" class="modal-section">
+          <p>
+            <strong><i class="fa-solid fa-boxes-stacked"></i> อุปกรณ์ที่เลือก:</strong>
+          </p>
+          <div class="modal-equipment-list">
+            <div v-for="eq in equipmentSelections.filter(e => e.selectedQuantity > 0)" :key="eq.id" class="modal-equipment-item">
+              <span class="eq-name">{{ eq.name }}</span>
+              <span class="eq-qty">จำนวน: <strong>{{ eq.selectedQuantity }}</strong></span>
+            </div>
+          </div>
+        </div>
+
         <div class="modal-buttons">
+          <button @click="backToEquipment" type="button" class="back">
+            <i class="fa-solid fa-arrow-left"></i> แก้ไขอุปกรณ์
+          </button>
           <button @click="handleCreateBooking" class="confirm">
             ยืนยันการจอง
           </button>
@@ -1214,6 +1239,24 @@ textarea {
   box-shadow: 0 6px 16px rgba(16, 185, 129, 0.6);
 }
 
+/* ปุ่มกลับไปแก้ไขอุปกรณ์ */
+.back {
+  background: transparent;
+  color: #fbbf24;
+  border: 1px solid rgba(251,191,36,0.18);
+  padding: 10px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.back:hover {
+  background: rgba(251,191,36,0.05);
+  transform: translateY(-2px);
+}
+
 .cancel {
   position: absolute;
   top: 20px;
@@ -1334,11 +1377,41 @@ textarea {
   font-size: 15px;
   line-height: 1.6;
   transition: all 0.3s ease;
+  /* ป้องกันการพิมพ์ / แสดง cursor ห้ามพิมพ์ */
+  cursor: not-allowed;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .detail:hover {
   border-color: #fbbf24;
 }
+
+/* Make disabled inputs show not-allowed cursor while modal is open */
+input:disabled,
+textarea:disabled,
+select:disabled {
+  cursor: not-allowed !important;
+  background: #2a2a2a !important;
+}
+
+.modal-equipment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+.modal-equipment-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(251, 191, 36, 0.04);
+  border: 1px solid rgba(251,191,36,0.12);
+}
+.modal-equipment-item .eq-name { color: #f3f3f3; font-weight: 600 }
+.modal-equipment-item .eq-qty { color: #fbbf24; font-weight: 700 }
 
 /* Equipment Modal Styles */
 .equipment-section {

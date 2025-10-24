@@ -70,7 +70,25 @@ const gotoPage = async (page) => {
   await fetchBookings();
 };
 
-onMounted(fetchBookings);
+onMounted(async () => {
+  // Preserve the original one-time reload behavior, but ensure we fetch bookings
+  // after the page is in its final state. If we trigger a reload here we return
+  // early and the subsequent mount will call fetchBookings.
+  if (!window.location.hash.includes("reloaded")) {
+    window.location.hash = "reloaded";
+    window.location.reload();
+    return;
+  }
+
+  // Initial fetch of bookings so pagination has the correct total count.
+  try {
+    await fetchBookings();
+  } catch (err) {
+    console.error("Error fetching bookings on mount:", err);
+  }
+});
+
+
 
 const formatDateTime = (date) =>
   dayjs(date < 1e10 ? date * 1000 : date)
@@ -254,6 +272,7 @@ const closeEquipmentModal = () => {
   selectedBookingEquipments.value = [];
   currentBookingForEquipment.value = null;
 };
+
 </script>
 
 <template>
@@ -420,7 +439,7 @@ const closeEquipmentModal = () => {
           </button>
 
           <button
-            :disabled="currentPage === totalPages"
+            :disabled="currentPage === totalPages || totalPages === 0"
             @click="gotoPage(currentPage + 1)"
           >
             ถัดไป

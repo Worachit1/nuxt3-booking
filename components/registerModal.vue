@@ -55,7 +55,7 @@ const handleRegister = async () => {
     error.value = "";
     const u = User.value;
     if (!u.first_name.trim() || !u.last_name.trim() || !u.email.trim() ||
-        !u.password.trim() || !u.phone.trim() || !u.imageFile) {
+        !u.password.trim() || !u.phone.trim()) {
         isLoading.value = false;
         await Swal.fire({
             icon: "warning",
@@ -73,7 +73,8 @@ const handleRegister = async () => {
             password: u.password,
             phone: u.phone,
             position_name: u.position_name,
-            image_url: u.imageFile,
+            // if no image uploaded, send a dash '-' as requested
+            image_url: u.imageFile ? u.imageFile : '-',
         });
         if (res?.ID || res?.data?.ID) {
             closeModal();

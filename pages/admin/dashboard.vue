@@ -67,8 +67,8 @@ const approvedBookings = computed(
 const finishedBookings = computed(
   () => bookingStore.bookings.filter((b) => b.status === "Finished").length
 );
-const rejectedBookings = computed(
-  () => bookingStore.bookings.filter((b) => b.status === "Rejected").length
+const canceledBookings = computed(
+  () => bookingStore.bookings.filter((b) => b.status === "Canceled").length
 );
 const totalRooms = computed(() => roomStore.rooms.length);
 const totalUsers = computed(() => userStore.users.length);
@@ -112,7 +112,7 @@ const statusChartData = computed(() => ({
         pendingBookings.value,
         approvedBookings.value,
         finishedBookings.value,
-        rejectedBookings.value,
+        canceledBookings.value,
       ],
       backgroundColor: [
         "rgba(251, 191, 36, 0.85)",
@@ -212,13 +212,21 @@ const weeklyTrendData = computed(() => {
   };
 });
 
-// Recent pending bookings (latest 5)
-const recentPendingBookings = computed(() => {
+// Recent bookings (include Pending, Approved, Finished). Limit for performance
+const recentBookings = computed(() => {
   return bookingStore.bookings
-    .filter((b) => b.status === "Pending")
-    .sort((a, b) => b.created_at - a.created_at)
-    .slice(0, 5);
+    .filter((b) => ["Pending", "Approved", "Finished"].includes(b.status))
+    .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))
+    // limit to a reasonable number; UI will scroll if too many
+    .slice(0, 50);
 });
+
+// Filter controls for recent bookings
+const allStatuses = ["Pending", "Approved", "Finished"];
+const selectedStatuses = ref(["Pending", "Approved", "Finished"]);
+const filteredRecentBookings = computed(() =>
+  recentBookings.value.filter((b) => selectedStatuses.value.includes(b.status))
+);
 
 // Reviews grouped by room with average rating
 const reviewsByRoom = computed(() => {
@@ -244,6 +252,11 @@ const reviewsByRoom = computed(() => {
   });
   
   // Calculate average and add room info
+  // Sort each group's reviews by created_at desc so index 0 is the latest
+  Object.values(grouped).forEach(item => {
+    item.reviews.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+  });
+
   const result = Object.values(grouped).map((item) => {
     const room = rooms.find(r => r.id === item.room_id);
     return {
@@ -252,7 +265,8 @@ const reviewsByRoom = computed(() => {
       room_image: room?.image_url || '/images/default-picture.png',
       review_count: item.count,
       average_rating: (item.totalRating / item.count).toFixed(1),
-      latest_review: item.reviews[0] // รีวิวล่าสุดของห้องนี้
+      latest_review: item.reviews[0] || null, // รีวิวล่าสุดของห้องนี้
+      reviews: item.reviews // include full reviews array for display
     };
   });
   
@@ -308,8 +322,10 @@ const formatDate = (timestamp) => {
 // Navigate to booking detail
 const router = useRouter();
 const viewBooking = (bookingId) => {
-  router.push(`/admin/bookings?id=${bookingId}`);
+  router.push("/admin/bookings");
 };
+
+// (users section removed — list was empty; restored to previous layout)
 </script>
 
 <template>
@@ -338,177 +354,196 @@ const viewBooking = (bookingId) => {
       <div v-else>
         <!-- Overview Cards -->
         <div class="overview-cards">
-        <div class="card card-primary">
-          <div class="card-icon">📅</div>
-          <div class="card-content">
-            <h3>{{ totalBookings }}</h3>
-            <p>การจองทั้งหมด</p>
-          </div>
-        </div>
-
-        <div class="card card-warning">
-          <div class="card-icon">⏳</div>
-          <div class="card-content">
-            <h3>{{ pendingBookings }}</h3>
-            <p>รออนุมัติ</p>
-          </div>
-        </div>
-
-        <div class="card card-success">
-          <div class="card-icon">✅</div>
-          <div class="card-content">
-            <h3>{{ approvedBookings }}</h3>
-            <p>อนุมัติแล้ว</p>
-          </div>
-        </div>
-
-        <div class="card card-info">
-          <div class="card-icon">🏁</div>
-          <div class="card-content">
-            <h3>{{ finishedBookings }}</h3>
-            <p>เสร็จสิ้น</p>
-          </div>
-        </div>
-
-        <div class="card card-danger">
-          <div class="card-icon">❌</div>
-          <div class="card-content">
-            <h3>{{ rejectedBookings }}</h3>
-            <p>ปฏิเสธ</p>
-          </div>
-        </div>
-
-        <div class="card card-secondary">
-          <div class="card-icon">🚪</div>
-          <div class="card-content">
-            <h3>{{ totalRooms }}</h3>
-            <p>ห้องทั้งหมด</p>
-          </div>
-        </div>
-
-        <div class="card card-secondary">
-          <div class="card-icon">👥</div>
-          <div class="card-content">
-            <h3>{{ totalUsers }}</h3>
-            <p>ผู้ใช้ทั้งหมด</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Time Period Stats -->
-      <div class="period-stats">
-        <div class="period-card">
-          <h4>📆 วันนี้</h4>
-          <p class="period-count">{{ todayBookings }}</p>
-          <span>การจอง</span>
-        </div>
-        <div class="period-card">
-          <h4>📅 สัปดาห์นี้</h4>
-          <p class="period-count">{{ weekBookings }}</p>
-          <span>การจอง</span>
-        </div>
-        <div class="period-card">
-          <h4>📊 เดือนนี้</h4>
-          <p class="period-count">{{ monthBookings }}</p>
-          <span>การจอง</span>
-        </div>
-      </div>
-
-      <!-- Charts Row 1 -->
-      <div class="charts-row">
-        <div class="chart-card">
-          <h3>📈 แนวโน้มการจอง (7 วันที่ผ่านมา)</h3>
-          <div class="chart-wrapper">
-            <Line :data="weeklyTrendData" :options="chartOptions" />
-          </div>
-        </div>
-
-        <div class="chart-card">
-          <h3>📊 สถานะการจอง</h3>
-          <div class="chart-wrapper">
-            <Doughnut :data="statusChartData" :options="chartOptions" />
-          </div>
-        </div>
-      </div>
-
-      <!-- Charts Row 2 -->
-      <div class="charts-row">
-        <div class="chart-card full-width">
-          <h3>🏆 ห้องที่ถูกจองมากที่สุด Top 5</h3>
-          <div class="chart-wrapper">
-            <Bar :data="topRoomsChartData" :options="chartOptions" />
-          </div>
-        </div>
-      </div>
-
-      <!-- Recent Activities -->
-      <div class="recent-section">
-        <div class="recent-card">
-          <h3>🔔 การจองที่รออนุมัติล่าสุด</h3>
-          <div v-if="recentPendingBookings.length > 0" class="recent-list">
-            <div
-              v-for="booking in recentPendingBookings"
-              :key="booking.id"
-              class="recent-item"
-              @click="viewBooking(booking.id)"
-            >
-              <div class="recent-info">
-                <p class="recent-title">{{ booking.title }}</p>
-                <p class="recent-detail">
-                  ห้อง: {{ booking.room_name }} | ผู้จอง: {{ booking.user_name }}
-                  {{ booking.user_lastname }}
-                </p>
-                <p class="recent-time">{{ formatDate(booking.start_time) }}</p>
-              </div>
-              <div class="recent-badge pending">รออนุมัติ</div>
+          <div class="card card-primary">
+            <div class="card-icon">📅</div>
+            <div class="card-content">
+              <h3>{{ totalBookings }}</h3>
+              <p>การจองทั้งหมด</p>
             </div>
           </div>
-          <div v-else class="no-data">ไม่มีการจองที่รออนุมัติ</div>
+
+          <div class="card">
+            <div class="card-icon">⏳</div>
+            <div class="card-content">
+              <h3>{{ pendingBookings }}</h3>
+              <p>รออนุมัติ</p>
+            </div>
+          </div>
+
+          <div class="card card-success">
+            <div class="card-icon">✅</div>
+            <div class="card-content">
+              <h3>{{ approvedBookings }}</h3>
+              <p>อนุมัติแล้ว</p>
+            </div>
+          </div>
+
+          <div class="card card-info">
+            <div class="card-icon">🏁</div>
+            <div class="card-content">
+              <h3>{{ finishedBookings }}</h3>
+              <p>เสร็จสิ้น</p>
+            </div>
+          </div>
+
+          <div class="card card-danger">
+            <div class="card-icon">❌</div>
+            <div class="card-content">
+              <h3>{{ canceledBookings }}</h3>
+              <p>ปฏิเสธ</p>
+            </div>
+          </div>
+
+          <div class="card card-secondary">
+            <div class="card-icon">🚪</div>
+            <div class="card-content">
+              <h3>{{ totalRooms }}</h3>
+              <p>ห้องทั้งหมด</p>
+            </div>
+          </div>
+
+          <div class="card card-secondary">
+            <div class="card-icon">👥</div>
+            <div class="card-content">
+              <h3>{{ totalUsers }}</h3>
+              <p>ผู้ใช้ทั้งหมด</p>
+            </div>
+          </div>
         </div>
 
-        <div class="recent-card">
-          <h3>⭐ คะแนนรีวิวแต่ละห้อง</h3>
-          <div v-if="reviewsByRoom.length > 0" class="recent-list">
-            <div
-              v-for="roomReview in reviewsByRoom"
-              :key="roomReview.room_id"
-              class="recent-item room-review-item"
-            >
-              <div class="room-review-header">
-                <div class="room-image-small">
-                  <img 
-                    :src="roomReview.room_image" 
-                    :alt="roomReview.room_name"
-                    @error="$event.target.src = '/images/default-picture.png'"
-                  />
+        <!-- Time Period Stats -->
+        <div class="period-stats">
+          <div class="period-card">
+            <h4>📆 วันนี้</h4>
+            <p class="period-count">{{ todayBookings }}</p>
+            <span>การจอง</span>
+          </div>
+          <div class="period-card">
+            <h4>📅 สัปดาห์นี้</h4>
+            <p class="period-count">{{ weekBookings }}</p>
+            <span>การจอง</span>
+          </div>
+          <div class="period-card">
+            <h4>📊 เดือนนี้</h4>
+            <p class="period-count">{{ monthBookings }}</p>
+            <span>การจอง</span>
+          </div>
+        </div>
+
+        <!-- Charts Row 1 -->
+        <div class="charts-row">
+          <div class="chart-card">
+            <h3>📈 แนวโน้มการจอง (7 วันที่ผ่านมา)</h3>
+            <div class="chart-wrapper">
+              <Line :data="weeklyTrendData" :options="chartOptions" />
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <h3>📊 สถานะการจอง</h3>
+            <div class="chart-wrapper">
+              <Doughnut :data="statusChartData" :options="chartOptions" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Row 2 -->
+        <div class="charts-row">
+          <div class="chart-card full-width">
+            <h3>🏆 ห้องที่ถูกจองมากที่สุด Top 5</h3>
+            <div class="chart-wrapper">
+              <Bar :data="topRoomsChartData" :options="chartOptions" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Recent Activities -->
+        <div class="recent-section">
+          <div class="recent-card">
+            <h3>🔔 การจองล่าสุด (รออนุมัติ / อนุมัติ / เสร็จสิ้น)</h3>
+            <div class="recent-filters">
+              <label v-for="s in allStatuses" :key="s" class="filter-chip">
+                <input type="checkbox" :value="s" v-model="selectedStatuses" />
+                <span :class="s.toLowerCase()">{{ s }}</span>
+              </label>
+            </div>
+
+            <div v-if="filteredRecentBookings.length > 0" class="recent-list">
+              <div
+                v-for="booking in filteredRecentBookings"
+                :key="booking.id"
+                class="recent-item"
+                @click="viewBooking(booking.id)"
+              >
+                <div class="recent-info">
+                  <p class="recent-title">{{ booking.title }}</p>
+                  <p class="recent-detail">
+                    ห้อง: {{ booking.room_name }} | ผู้จอง: {{ booking.user_name }} {{ booking.user_lastname }}
+                  </p>
+                  <p class="recent-time">{{ formatDate(booking.start_time) }}</p>
                 </div>
-                <div class="room-review-info">
-                  <h4 class="room-name">{{ roomReview.room_name }}</h4>
-                  <div class="review-stats">
-                    <div class="average-rating">
-                      <span class="rating-number">{{ roomReview.average_rating }}</span>
-                      <span class="rating-stars">
-                        <span v-for="i in 5" :key="i" class="star" :class="{ filled: i <= Math.round(roomReview.average_rating) }">★</span>
-                      </span>
+                <div class="recent-badge" :class="booking.status ? booking.status.toLowerCase() : ''">
+                  {{ booking.status }}
+                </div>
+              </div>
+            </div>
+            <div v-else class="no-data">ไม่มีการจองล่าสุด</div>
+          </div>
+
+          <div class="recent-card">
+            <h3>⭐ คะแนนรีวิวแต่ละห้อง</h3>
+            <div v-if="reviewsByRoom.length > 0" class="recent-list">
+              <div
+                v-for="roomReview in reviewsByRoom"
+                :key="roomReview.room_id"
+                class="recent-item room-review-item"
+              >
+                <div class="room-review-header">
+                  <div class="room-image-small">
+                    <img
+                      :src="roomReview.room_image"
+                      :alt="roomReview.room_name"
+                      @error="$event.target.src = '/images/default-picture.png'"
+                    />
+                  </div>
+                  <div class="room-review-info">
+                    <h4 class="room-name">{{ roomReview.room_name }}</h4>
+                    <div class="review-stats">
+                      <div class="average-rating">
+                        <span class="rating-number">{{ roomReview.average_rating }}</span>
+                        <span class="rating-stars">
+                          <span v-for="i in 5" :key="i" class="star" :class="{ filled: i <= Math.round(roomReview.average_rating) }">★</span>
+                        </span>
+                      </div>
+                      <span class="review-count">({{ roomReview.review_count }} รีวิว)</span>
                     </div>
-                    <span class="review-count">({{ roomReview.review_count }} รีวิว)</span>
                   </div>
                 </div>
-              </div>
-              <div v-if="roomReview.latest_review" class="latest-review">
-                <p class="review-comment">
-                  <i class="fa-solid fa-quote-left"></i>
-                  {{ roomReview.latest_review.comment || "ไม่มีความคิดเห็น" }}
-                  <i class="fa-solid fa-quote-right"></i>
-                </p>
+
+                <div v-if="roomReview.review_count === 2" class="latest-review multiple-comments">
+                  <div v-for="(rv, idx) in roomReview.reviews" :key="idx" class="review-row">
+                    <p class="review-comment">
+                      <i class="fa-solid fa-quote-left"></i>
+                      {{ rv.comment || 'ไม่มีความคิดเห็น' }}
+                      <i class="fa-solid fa-quote-right"></i>
+                    </p>
+                  </div>
+                </div>
+
+                <div v-else-if="roomReview.latest_review" class="latest-review">
+                  <p class="review-comment">
+                    <i class="fa-solid fa-quote-left"></i>
+                    {{ roomReview.latest_review.comment || "ไม่มีความคิดเห็น" }}
+                    <i class="fa-solid fa-quote-right"></i>
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
-          <div v-else class="no-data">
-            <i class="fa-solid fa-star"></i> ยังไม่มีรีวิว
+            <div v-else class="no-data">
+              <i class="fa-solid fa-star"></i> ยังไม่มีรีวิว
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </div>
   </div>
@@ -842,6 +877,21 @@ const viewBooking = (bookingId) => {
   display: flex;
   flex-direction: column;
   gap: 14px;
+  /* make list scrollable when content is long */
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.recent-list::-webkit-scrollbar {
+  width: 10px;
+}
+.recent-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.recent-list::-webkit-scrollbar-thumb {
+  background: #e0e0e0;
+  border-radius: 10px;
 }
 
 .recent-item {
@@ -904,6 +954,55 @@ const viewBooking = (bookingId) => {
   color: #ffffff;
   box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
 }
+
+.recent-badge.approved {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+.recent-badge.finished {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.recent-badge.canceled {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.recent-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f3f4f6;
+  padding: 6px 10px;
+  border-radius: 20px;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.filter-chip input {
+  width: 14px;
+  height: 14px;
+}
+
+.filter-chip .pending { color: #974a06 }
+.filter-chip .approved { color: #065f46 }
+.filter-chip .finished { color: #1e3a8a }
+.filter-chip .canceled { color: #7f1d1d }
+
+/* Users section removed */
 
 /* Room Review Item */
 .room-review-item {
@@ -996,6 +1095,8 @@ const viewBooking = (bookingId) => {
   font-size: 10px;
   margin: 0 4px;
 }
+.multiple-comments .review-row { padding: 6px 0; border-bottom: 1px dashed #eee }
+.multiple-comments .review-row:last-child { border-bottom: none }
 
 .recent-rating {
   margin: 0 0 10px 0;

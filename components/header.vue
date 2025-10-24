@@ -47,10 +47,10 @@ const userProfileImage = computed(
   () => user.value?.image_url || "/images/default-profile.png"
 );
 const userFirstName = computed(() =>
-  isLoading.value ? "กำลังโหลด..." : user.value?.first_name || "Guest"
+  isLoading.value ? "กำลังโหลด..." : user.value?.first_name || "เข้าสู่ระบบ"
 );
 const userLastName = computed(() =>
-  isLoading.value ? "" : user.value?.last_name || "User"
+  isLoading.value ? "" : user.value?.last_name || ""
 );
 
 const showMenu = ref(false);
