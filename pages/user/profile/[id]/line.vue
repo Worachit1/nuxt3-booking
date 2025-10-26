@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 
 // === runtime config ===
 const {
@@ -19,21 +20,31 @@ const errorMsg  = ref('')
 const inviteUrlHref = computed<string>(() => String(lineInviteUrl || ''))
 const chatLinkHref  = computed<string>(() => chatLink.value || '')
 
+// route param: profile user id from URL
+const route = useRoute()
+const profileUserId = computed<string>(() => String(route.params.id || ''))
+
+// current logged-in user id (viewer)
+const currentUserId = ref<string>(localStorage.getItem('user_id') || '')
+
+// storage key uses profile id to avoid leaking other users' codes to the whole browser
+const storageKey = computed<string>(() => `line_pairing_code_${profileUserId.value || 'anonymous'}`)
+
 // no expiry tracking: once code is present it is shown permanently
 
 onMounted(async () => {
-  // ถ้ามี code เก่าที่เก็บไว้ใน localStorage ให้ขึ้นก่อน เพื่อ UX ที่ไม่ต้องรอเครือข่าย
-  const saved = localStorage.getItem('line_pairing_code') || ''
+  // ถ้ามี code เก่าที่เก็บไว้ใน localStorage สำหรับ profile นี้ ให้ขึ้นก่อน เพื่อ UX ที่ไม่ต้องรอเครือข่าย
+  const saved = localStorage.getItem(storageKey.value) || ''
   if (saved) {
     code.value = saved
     chatLink.value = `https://line.me/R/oaMessage/${lineBotBasicId}/?${encodeURIComponent(code.value)}`
   }
 
-  let userId = localStorage.getItem('user_id') || ''
-  if (!userId && lineUserId.value) userId = lineUserId.value
-  if (userId) {
-    await fetchPairingCodeByUserId(userId)
-    console.log('Fetched pairing code for user_id:', userId)
+  // try to fetch pairing code for the profile user id (from route)
+  const profileId = profileUserId.value
+  if (profileId) {
+    const found = await fetchPairingCodeByUserId(profileId)
+    console.log('Fetched pairing code for profile user_id:', profileId, 'found:', found)
   }
 })
 
@@ -58,8 +69,8 @@ async function fetchPairingCodeByUserId(userId: string) {
       code.value = res.data.code
       lineUserId.value = res.data.user_id
       chatLink.value = `https://line.me/R/oaMessage/${lineBotBasicId}/?${encodeURIComponent(code.value)}`
-  // เก็บไว้ที่ localStorage ให้ขึ้นทันทีเมื่อ reload
-  try { localStorage.setItem('line_pairing_code', code.value) } catch (e) { /* ignore */ }
+      // เก็บไว้ที่ localStorage ให้ขึ้นทันทีเมื่อ reload (key per profile)
+      try { localStorage.setItem(storageKey.value, code.value) } catch (e) { /* ignore */ }
       // QR generation removed (LINE QR not approved)
       return true
     }
@@ -91,11 +102,11 @@ async function fetchPairingCode() {
       `${apiBase}/api/v1/line/pairing-code`,
       { method: 'POST', headers }
     )
-  code.value = res.data.code
+    code.value = res.data.code
     lineUserId.value = res.data.user_id
     chatLink.value = `https://line.me/R/oaMessage/${lineBotBasicId}/?${encodeURIComponent(code.value)}`
-  // เก็บไว้ที่ localStorage ให้ขึ้นทันทีเมื่อ reload
-  try { localStorage.setItem('line_pairing_code', code.value) } catch (e) { /* ignore */ }
+    // เก็บไว้ที่ localStorage ให้ขึ้นทันทีเมื่อ reload (key per profile)
+    try { localStorage.setItem(storageKey.value, code.value) } catch (e) { /* ignore */ }
     // QR generation removed (LINE QR not approved)
   } catch (e: any) {
     errorMsg.value = e?.message || 'เกิดข้อผิดพลาด'
@@ -108,16 +119,29 @@ async function handlePairingButton() {
   loading.value = true
   errorMsg.value = ''
   try {
-    // หา user_id
-    let userId = localStorage.getItem('user_id') || ''
-    if (!userId && lineUserId.value) userId = lineUserId.value
-    if (userId) {
-      const stillValid = await fetchPairingCodeByUserId(userId)
-      if (!stillValid) {
-        await fetchPairingCode()
+    // When clicking the button, we prefer to fetch for the profile being viewed.
+    const profileId = profileUserId.value
+    // If viewing a profile (profileId present), fetch that user's code. If not found,
+    // only allow creating a new code when the viewer is the profile owner (i.e., currentUserId).
+    if (profileId) {
+      const found = await fetchPairingCodeByUserId(profileId)
+      if (!found) {
+        if (currentUserId.value && currentUserId.value === profileId) {
+          // viewer is the owner — allow creating a code
+          await fetchPairingCode()
+        } else {
+          // viewing someone else who has no code
+          alert('ผู้ใช้ยังไม่มีรหัสเชื่อม LINE')
+        }
       }
     } else {
-      await fetchPairingCode()
+      // no profile in URL: fallback to current user
+      if (currentUserId.value) {
+        const found = await fetchPairingCodeByUserId(currentUserId.value)
+        if (!found) await fetchPairingCode()
+      } else {
+        alert('กรุณาล็อกอินก่อนเพื่อขอรหัส')
+      }
     }
   } finally {
     loading.value = false
@@ -125,7 +149,7 @@ async function handlePairingButton() {
 }
 
 function clearCode() {
-  try { localStorage.removeItem('line_pairing_code') } catch (e) {}
+  try { localStorage.removeItem(storageKey.value) } catch (e) {}
   code.value = ''
   chatLink.value = ''
 }
@@ -139,15 +163,22 @@ function clearCode() {
         <div class="pairing-center">
           <div class="pairing-code-box">
             <div>
-              <button
-                class="btn-gold"
-                :disabled="!!loading || !!code"
-                :style="(loading || code) ? 'background: #dc2626; color: #fff;' : ''"
-                @click="handlePairingButton"
-              >
-                <template v-if="!code">ขอรหัสเชื่อม LINE</template>
-                <template v-else>โค้ดพร้อมใช้งาน</template>
-              </button>
+              <!-- If viewer is profile owner, allow requesting a code. Otherwise only show fetch for profile user. -->
+              <template v-if="currentUserId === profileUserId">
+                <button
+                  class="btn-gold"
+                  :disabled="!!loading || !!code"
+                  :style="(loading || code) ? 'background: #dc2626; color: #fff;' : ''"
+                  @click="handlePairingButton"
+                >
+                  <template v-if="!code">ขอรหัสเชื่อม LINE</template>
+                  <template v-else>โค้ดพร้อมใช้งาน</template>
+                </button>
+              </template>
+              <template v-else>
+                <!-- viewing another user's profile -->
+                <button class="btn-gold" disabled v-if="!code">ผู้ใช้ยังไม่มีรหัส</button>
+              </template>
             </div>
 
             <div class="code-badge" v-if="code">

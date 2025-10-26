@@ -78,9 +78,11 @@ export const useAuthStore = defineStore("auth", {
                 formData.append("password", newUser.password);
                 formData.append("position_name", newUser.position_name);
                 formData.append("phone", newUser.phone);
+                // Only append image_url when it's a File or a non-placeholder value.
+                // Some backends may reject placeholder strings like '-' — skip the field in that case.
                 if (newUser.image_url instanceof File) {
                     formData.append("image_url", newUser.image_url);
-                } else {
+                } else if (typeof newUser.image_url === 'string' && newUser.image_url && newUser.image_url !== '-') {
                     formData.append("image_url", newUser.image_url);
                 }
                 const response = await axios.post(

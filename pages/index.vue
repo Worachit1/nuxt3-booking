@@ -164,11 +164,27 @@ const filteredBuildingRooms = computed(() => {
       (room.capacity && room.capacity >= parseInt(searchCapacity.value));
 
     // Filter by room type id
-    const typeId =
-      room.room_type_id ?? room.roomTypeId ?? room.type_id ?? room.typeId;
-    const typeMatch =
-      !searchRoomTypeId.value ||
-      String(typeId || "") === String(searchRoomTypeId.value || "");
+    // Try to detect type id and type name from various possible shapes
+    const typeId = room.room_type_id ?? room.roomTypeId ?? room.type_id ?? room.typeId;
+    const typeName =
+      room.room_type?.name ??
+      room.room_type_name ??
+      room.type_name ??
+      room.type ??
+      room.roomTypeName ??
+      room.roomType ??
+      "";
+
+    // If user selected a numeric id (or id-like string) compare to id;
+    // otherwise allow matching by type name (case-insensitive)
+    let typeMatch = true;
+    if (searchRoomTypeId.value) {
+      const sel = String(searchRoomTypeId.value).trim();
+      const selLower = sel.toLowerCase();
+      const idMatch = String(typeId ?? "").toLowerCase() === selLower;
+      const nameMatch = String(typeName ?? "").toLowerCase() === selLower;
+      typeMatch = idMatch || nameMatch;
+    }
 
     return nameMatch && capacityMatch && typeMatch;
   });
@@ -252,7 +268,8 @@ const handleAiSearch = async () => {
       body: {
         query: aiSearchQuery.value,
         rooms: allRooms,
-        buildings: buildings.value
+        buildings: buildings.value,
+        roomTypes: roomTypesStore.roomTypes || []
       }
     });
 
@@ -558,19 +575,20 @@ const clearAiSearch = () => {
                 </div>
                 <div class="search-input-group">
                   <label for="searchRoomType">ประเภทห้อง:</label>
-                  <select
-                    id="searchRoomType"
-                    v-model="searchRoomTypeId"
-                    class="search-input"
-                  >
+                  <select id="searchRoomType" v-model="searchRoomTypeId" class="search-input">
                     <option value="">ทั้งหมด</option>
-                    <option
-                      v-for="rt in roomTypesStore.roomTypes"
-                      :key="rt.id"
-                      :value="rt.id"
-                    >
-                      {{ rt.name || rt.type || rt.id }}
-                    </option>
+                    <template v-if="roomTypesStore.roomTypes && roomTypesStore.roomTypes.length">
+                      <option v-for="rt in roomTypesStore.roomTypes" :key="rt.id" :value="rt.id">
+                        {{ rt.name || rt.type || rt.id }}
+                      </option>
+                    </template>
+                    <template v-else>
+                      <!-- Fallback hard-coded Thai room types when API/store empty -->
+                      <option value="ห้องปฏิบัติการ">ห้องปฏิบัติการ</option>
+                      <option value="ห้องบรรยาย">ห้องบรรยาย</option>
+                      <option value="ห้องคอมพิวเตอร์">ห้องคอมพิวเตอร์</option>
+                      <option value="ห้องกีฬา">ห้องกีฬา</option>
+                    </template>
                   </select>
                 </div>
                 <button @click="clearSearch" class="clear-button">

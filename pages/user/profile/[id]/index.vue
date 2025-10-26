@@ -301,30 +301,6 @@ onMounted(async () => {
               </div>
             </div>
 
-            <!-- Password Section (Only when editing) -->
-            <div v-if="isEditing" class="password-section">
-              <div class="section-divider">
-                <span>
-                  <i class="fa-solid fa-lock"></i>
-                  เปลี่ยนรหัสผ่าน (ถ้าต้องการ)
-                </span>
-              </div>
-              <div class="form-row">
-                <div class="form-group">
-                  <label>
-                    <i class="fa-solid fa-key"></i>
-                    รหัสผ่านใหม่
-                  </label>
-                  <input
-                    class="input-box"
-                    type="password"
-                    placeholder="ปล่อยว่างไว้หากไม่ต้องการเปลี่ยน"
-                    v-model="editUser.password"
-                  />
-                  <span class="field-note">ปล่อยว่างไว้หากไม่ต้องการเปลี่ยนรหัสผ่าน</span>
-                </div>
-              </div>
-            </div>
           </div>
 
           <!-- Action Buttons -->
