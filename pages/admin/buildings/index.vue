@@ -4,10 +4,14 @@ import Swal from "sweetalert2";
 import "sweetalert2/dist/sweetalert2.min.css";
 import LoadingPage from "@/components/Loading.vue";
 import { useBuildingStore } from "@/store/buildingStore";
+import { useRoomStore } from "@/store/roomStore";
+import { useBuilding_RoomStore } from "@/store/building_roomStore";
 
 definePageMeta({ middleware: ["load-user"] });
 
 const buildingStore = useBuildingStore();
+const roomStore = useRoomStore();
+const buildingRoomStore = useBuilding_RoomStore();
 const { isLoading } = storeToRefs(buildingStore);
 
 const editableBuildings = ref([]);
@@ -18,7 +22,13 @@ const newImagePreview = ref(null);
 
 // โหลดข้อมูลอาคาร
 const loadBuildings = async () => {
-  await buildingStore.fetchBuildings();
+  // Ensure we also have the rooms list and building-room relationships
+  // so we can check before deleting a building
+  await Promise.all([
+    buildingStore.fetchBuildings(),
+    roomStore.fetchAllRooms(),
+    buildingRoomStore.fetchBuilding_Rooms(),
+  ]);
   editableBuildings.value = buildingStore.buildings.map((b) => ({
     id: b.id,
     name: b.name || "",
@@ -31,6 +41,28 @@ const loadBuildings = async () => {
 };
 
 onMounted(loadBuildings);
+
+// helper: check if any room references this building (covers multiple possible room keys)
+const buildingHasRooms = (buildingId) => {
+  // Check building_room relationships first (most explicit)
+  if (
+    buildingRoomStore.building_rooms &&
+    buildingRoomStore.building_rooms.length > 0
+  ) {
+    const found = buildingRoomStore.building_rooms.some((br) => {
+      const bid = br.building_id ?? br.buildingId ?? br.building ?? br.building_id;
+      return String(bid) === String(buildingId);
+    });
+    if (found) return true;
+  }
+
+  // Fallback: check roomStore.rooms for any room pointing to this building
+  if (!roomStore.rooms || roomStore.rooms.length === 0) return false;
+  return roomStore.rooms.some((r) => {
+    const bid = r.building_id ?? r.building ?? r.buildingId ?? r.building_id;
+    return String(bid) === String(buildingId);
+  });
+};
 
 // เริ่มแก้ไข
 const startEdit = (index) => {
@@ -127,8 +159,27 @@ const saveEdit = async (index) => {
 
 // ลบอาคาร
 const deleteBuilding = async (b) => {
-  if (b.rooms_name.length) {
-    Swal.fire("ไม่สามารถลบได้", "มีห้องอยู่ในอาคารนี้", "error");
+  // Client-side quick check
+  if ((b.rooms_name && b.rooms_name.length) || buildingHasRooms(b.id)) {
+    return await showCannotDeleteAlert(b);
+  }
+
+  // Double-check with server: ask building_room endpoint for rooms in this building
+  try {
+    const serverRooms = await buildingRoomStore.getRoomsByBuildingId(String(b.id));
+    console.log("serverRooms for building", b.id, serverRooms);
+    // Handle multiple possible response shapes: array or { data: [...] }
+    const roomsArray = Array.isArray(serverRooms)
+      ? serverRooms
+      : serverRooms?.data ?? serverRooms?.rooms ?? [];
+    if (Array.isArray(roomsArray) && roomsArray.length > 0) {
+      console.log("Blocking delete: server reports rooms:", roomsArray);
+      return await showCannotDeleteAlert(b);
+    }
+  } catch (err) {
+    console.warn("Error checking building rooms on server:", err);
+    // If the server check fails, be conservative and prevent deletion
+    Swal.fire("ไม่สามารถลบได้", "ไม่สามารถตรวจสอบรายการห้องจากเซิร์ฟเวอร์ โปรดลองใหม่ภายหลัง", "error");
     return;
   }
 
@@ -146,6 +197,29 @@ const deleteBuilding = async (b) => {
   await loadBuildings();
   buildingStore.isLoading = false;
   Swal.fire("ลบเรียบร้อย", "", "success");
+};
+
+// Consistent cannot-delete alert
+const showCannotDeleteAlert = async (b) => {
+  const name = b?.name ? `"${b.name}"` : "อาคารนี้";
+  await Swal.fire({
+    title: "ไม่สามารถลบอาคาร",
+    html: `${name} มีห้องอยู่ จึงไม่สามารถลบได้`,
+    icon: "error",
+    confirmButtonText: "ตกลง",
+  });
+};
+
+// When user clicks delete: if building has rooms, show an explanatory modal (and list rooms);
+// otherwise proceed to deleteBuilding which already contains server-side double-checks.
+const handleDeleteClick = async (b) => {
+  // If client-side check thinks there are rooms, show a simple error message and do not proceed
+  if ((b.rooms_name && b.rooms_name.length) || buildingHasRooms(b.id)) {
+    return await showCannotDeleteAlert(b);
+  }
+
+  // No rooms found client-side -> proceed to delete flow (deleteBuilding will still double-check server-side)
+  await deleteBuilding(b);
 };
 
 // ปิด modal
@@ -266,7 +340,7 @@ const closeModals = () => {
               <i class="fa-solid fa-check"></i>
               <span>บันทึก</span>
             </button>
-            <button class="btn-delete" @click="deleteBuilding(b)">
+            <button class="btn-delete" @click="handleDeleteClick(b)" :title="(b.rooms_name && b.rooms_name.length) || buildingHasRooms(b.id) ? 'ไม่สามารถลบเนื่องจากมีห้องในอาคาร' : 'ลบอาคาร'">
               <i class="fa-solid fa-trash"></i>
               <span>ลบ</span>
             </button>
