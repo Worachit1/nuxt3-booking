@@ -129,9 +129,9 @@ onMounted(async () => {
         </div>
       </div>
       <div class="header-actions">
-        <!-- <button v-if="!isEditing" class="btn-edit" @click="startEdit">
+        <button v-if="!isEditing" class="btn-edit" @click="startEdit">
           <i class="fa-solid fa-pen-to-square"></i> แก้ไขข้อมูล
-        </button> -->
+        </button>
         <button @click="handleBackButton" class="btn-back-header">
           <i class="fa-solid fa-arrow-left"></i> กลับ
         </button>
@@ -192,10 +192,10 @@ onMounted(async () => {
               <i class="fa-solid fa-address-card"></i>
               ข้อมูลส่วนตัว
             </h3>
-            <!-- <span v-if="!isEditing" class="edit-hint">
+            <span v-if="!isEditing" class="edit-hint">
               <i class="fa-solid fa-info-circle"></i>
               คลิก "แก้ไขข้อมูล" เพื่อเปลี่ยนแปลงข้อมูล
-            </span> -->
+            </span>
           </div>
 
           <div class="form-section">
