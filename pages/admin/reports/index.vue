@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, ref, computed } from "vue";
+import Swal from "sweetalert2";
 import { useReport } from "@/store/reportStore";
 import { useRoomStore } from "@/store/roomStore";
 import LoadingPage from "@/components/Loading.vue";
@@ -27,6 +28,28 @@ const roomName = (room_id) => {
 const goEditRoom = (room_id) => {
   if (!room_id) return;
   navigateTo(`/admin/rooms/edit/${room_id}`);
+};
+
+const handleDelete = async (rep) => {
+  if (!rep || !rep.id) return;
+  const confirm = await Swal.fire({
+    title: "ยืนยันการลบ",
+    html: `คุณต้องการลบรายงานหรือไม่?`,
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "ลบ",
+    cancelButtonText: "ยกเลิก",
+    reverseButtons: true,
+  });
+  if (confirm.isConfirmed) {
+    try {
+      await reportStore.deleteReport(String(rep.id));
+      await Swal.fire({ icon: "success", title: "ลบสำเร็จ" });
+    } catch (e) {
+      console.error("delete report error", e);
+      await Swal.fire({ icon: "error", title: "ไม่สามารถลบได้" });
+    }
+  }
 };
 
 // Helper: normalize various timestamp formats/keys to formatted date string
@@ -102,6 +125,14 @@ const formatCreatedAt = (rep) => {
             <td>
               <button class="edit-btn" @click="goEditRoom(rep.room_id)">
                 ไปแก้ไขห้อง
+              </button>
+              <button
+                class="delete-btn"
+                @click="handleDelete(rep)"
+                :disabled="reportStore.isLoading"
+                style="margin-left:8px"
+              >
+                ลบ
               </button>
             </td>
           </tr>
@@ -195,5 +226,24 @@ const formatCreatedAt = (rep) => {
 .edit-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(45, 45, 45, 0.3);
+}
+
+.delete-btn {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  color: #ffffff;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+.delete-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.delete-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(220, 38, 38, 0.25);
 }
 </style>

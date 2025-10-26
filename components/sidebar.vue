@@ -256,14 +256,6 @@ function hideTooltip() {
         </router-link>
 
         <router-link
-          to="/admin/roomStatistics"
-          class="home-link"
-          exact-active-class="active-link"
-        >
-          <i class="fa-solid fa-chart-simple"></i> สถิติห้องประชุม
-        </router-link>
-
-        <router-link
           to="/admin/buildings"
           class="home-link"
           exact-active-class="active-link"
@@ -363,6 +355,11 @@ function hideTooltip() {
 
 .sidebar.open {
   transform: translateX(0);
+  /* When opened, switch to absolute so the sidebar scrolls with the page
+     instead of staying fixed to the viewport. This lets the sidebar move
+     up/down when the user scrolls the main document. */
+  position: absolute;
+  height: auto;
 }
 
 .sidebar-content {

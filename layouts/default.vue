@@ -6,7 +6,20 @@ import Header from "@/components/header.vue";
 const isSidebarOpen = ref(false);
 const toggleSidebar = () => {
   isSidebarOpen.value = !isSidebarOpen.value;
-  document.body.style.overflow = isSidebarOpen.value ? "hidden" : "";
+  // On small screens we keep the previous behavior (prevent body scroll),
+  // but on larger screens allow the page to scroll even when the sidebar is open.
+  try {
+    if (typeof window !== "undefined") {
+      if (window.innerWidth <= 768) {
+        document.body.style.overflow = isSidebarOpen.value ? "hidden" : "";
+      } else {
+        // ensure body is scrollable on desktop
+        document.body.style.overflow = "";
+      }
+    }
+  } catch (e) {
+    // ignore any DOM exceptions in SSR context
+  }
 };
 </script>
 

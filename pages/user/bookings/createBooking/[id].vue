@@ -503,15 +503,15 @@ const handleCancel = () => {
           <label for="start_time"
             >เวลาเริ่มจอง: ( จองได้เฉพาะช่วง {{ allowedStartTime }} น.)</label
           >
-          <input
+          <el-time-picker
             id="start_time"
             v-model="Booking.start_time"
-            type="time"
-            :min="allowedStartTime"
-            :max="allowedEndTime"
-            :title="`เลือกได้ระหว่าง ${allowedStartTime} - ${allowedEndTime}`"
-            required
+            format="HH:mm"
+            value-format="HH:mm"
+            :placeholder="`เลือกเวลาเริ่ม (ระหว่าง ${allowedStartTime} - ${allowedEndTime})`
+            "
             :disabled="showModal"
+            :editable="false"
           />
           <small v-if="!isStartAllowed" class="error-text"
             >อยู่นอกช่วงเวลาอนุญาต ({{ allowedStartTime }} -
@@ -524,15 +524,15 @@ const handleCancel = () => {
           <label for="end_time"
             >เวลาสิ้นสุดการจอง: ( ถึงช่วง {{ allowedEndTime }} น.)</label
           >
-          <input
+          <el-time-picker
             id="end_time"
             v-model="Booking.end_time"
-            type="time"
-            :min="allowedStartTime"
-            :max="allowedEndTime"
-            :title="`เลือกได้ระหว่าง ${allowedStartTime} - ${allowedEndTime}`"
-            required
+            format="HH:mm"
+            value-format="HH:mm"
+            :placeholder="`เลือกเวลาสิ้นสุด (ระหว่าง ${allowedStartTime} - ${allowedEndTime})`
+            "
             :disabled="showModal"
+            :editable="false"
           />
           <small v-if="!isEndAllowed" class="error-text"
             >อยู่นอกช่วงเวลาอนุญาต ({{ allowedStartTime }} -
