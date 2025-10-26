@@ -97,6 +97,11 @@ const handleDeleteRoom = async (room) => {
 
   roomStore.isLoading = true;
   await roomStore.deleteRoom(room.id);
+    if (!window.location.hash.includes("reloaded")) {
+    window.location.hash = "reloaded";
+    window.location.reload();
+    return;
+  }
 
   // อัปเดตข้อมูลอาคารใหม่หลังลบห้อง
   await fetchBuildings();

@@ -182,12 +182,6 @@ onMounted(async () => {
                 <span class="role-badge">{{ user.role_name || "User" }}</span>
               </div>
             </div>
-
-            <!-- Logout Button -->
-            <button class="btn-logout" @click="handleLogout">
-              <i class="fa-solid fa-right-from-bracket"></i>
-              <span>ออกจากระบบ</span>
-            </button>
           </div>
         </div>
 

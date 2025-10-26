@@ -355,11 +355,7 @@ function hideTooltip() {
 
 .sidebar.open {
   transform: translateX(0);
-  /* When opened, switch to absolute so the sidebar scrolls with the page
-     instead of staying fixed to the viewport. This lets the sidebar move
-     up/down when the user scrolls the main document. */
   position: absolute;
-  height: auto;
 }
 
 .sidebar-content {
