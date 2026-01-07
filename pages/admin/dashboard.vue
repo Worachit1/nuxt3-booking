@@ -402,13 +402,6 @@ const viewBooking = (bookingId) => {
             </div>
           </div>
 
-          <div class="card card-secondary">
-            <div class="card-icon">👥</div>
-            <div class="card-content">
-              <h3>{{ totalUsers }}</h3>
-              <p>ผู้ใช้ทั้งหมด</p>
-            </div>
-          </div>
         </div>
 
         <!-- Time Period Stats -->
